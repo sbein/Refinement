@@ -1,5 +1,7 @@
 """The Modified Differential Multiplier Method (MDMM) for PyTorch.
-from: https://github.com/crowsonkb/mdmm
+
+adapted from https://github.com/crowsonkb/mdmm
+see https://www.engraved.blog/how-we-can-make-machine-learning-algorithms-tunable/
 """
 
 import abc
@@ -35,8 +37,8 @@ class Constraint(nn.Module, metaclass=abc.ABCMeta):
     def infeasibility(self, fn_value):
         ...
 
-    def forward(self, X, y, output):
-        fn_value = self.fn(X, y, output)
+    def forward(self, inp, out, target):
+        fn_value = self.fn(inp, out, target)
         inf = self.infeasibility(fn_value)
         l_term = self.lmbda * inf
         damp_term = self.damping * inf**2 / 2
@@ -163,12 +165,17 @@ class MDMM(nn.ModuleList):
                           {'params': lambdas, 'lr': -lr},
                           {'params': slacks, 'lr': lr}])
 
-    def forward(self, loss, X, y, output):
+    def forward(self, loss, inp, out, target):
         value = loss.clone()
         fn_values, infs = [], []
         for c in self:
-            c_return = c(X, y, output)
+            c_return = c(inp, out, target)
             value += c_return.value
             fn_values.append(c_return.fn_value)
             infs.append(c_return.inf)
         return MDMMReturn(value, fn_values, infs)
+
+
+if __name__ == '__main__':
+
+    pass
