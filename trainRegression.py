@@ -504,7 +504,7 @@ print(sum(p.numel() for p in model.parameters() if p.requires_grad), 'trainable 
 calculatelosseswithtransformedvariables = True
 includeparametersinmmd = True
 
-mmd_fixsigma_fn = my_mmd.MMD(kernel_mul=10., kernel_num=5, fix_sigma=1.)
+mmdfixsigma_fn = my_mmd.MMD(kernel_mul=10., kernel_num=5, fix_sigma=1.)
 mmd_fn = my_mmd.MMD(kernel_mul=10., kernel_num=5)
 mse_fn = torch.nn.MSELoss()
 mae_fn = torch.nn.L1Loss()
@@ -513,45 +513,45 @@ huber_fn = torch.nn.HuberLoss(delta=0.1)
 # these will be evaluated/monitored during training and can be used to update the model (see below)
 loss_fns = {
 
-    'mmd_fixsigma_output_target':
-        lambda inp_, out_, target_: mmd_fixsigma_fn(out_, target_,
-                                                    parameters=(OneHotEncode(source_idx=onehotencode[2], target_vals=onehotencode[1]).forward(inp_)[:, :len(PARAMETERS)]
-                                                                if onehotencode else inp_[:, :len(PARAMETERS)])
-                                                    if includeparametersinmmd else None),
+    'mmdfixsigma_output_target':
+        lambda inp_, out_, target_: mmdfixsigma_fn(out_, target_,
+                                                   parameters=(OneHotEncode(source_idx=onehotencode[2], target_vals=onehotencode[1]).forward(inp_)[:, :len(PARAMETERS)]
+                                                               if onehotencode else inp_[:, :len(PARAMETERS)])
+                                                   if includeparametersinmmd else None),
 
-    # 'mmd_fixsigma_output_target_hadflav0':
-    #     lambda inp_, out_, target_: mmd_fixsigma_fn(out_, target_,
+    # 'mmdfixsigma_output_target_hadflav0':
+    #     lambda inp_, out_, target_: mmdfixsigma_fn(out_, target_,
     #                                                 parameters=(OneHotEncode(source_idx=onehotencode[2], target_vals=onehotencode[1]).forward(inp_)[:, :len(PARAMETERS)]
     #                                                             if onehotencode else inp_[:, :len(PARAMETERS)])
     #                                                 if includeparametersinmmd else None,
     #                                                 mask=inp_[:, hadronFlavourIndex] == 0),
 
-    # 'mmd_fixsigma_output_target_hadflav4':
-    #     lambda inp_, out_, target_: mmd_fixsigma_fn(out_, target_,
+    # 'mmdfixsigma_output_target_hadflav4':
+    #     lambda inp_, out_, target_: mmdfixsigma_fn(out_, target_,
     #                                                 parameters=(OneHotEncode(source_idx=onehotencode[2], target_vals=onehotencode[1]).forward(inp_)[:, :len(PARAMETERS)]
     #                                                             if onehotencode else inp_[:, :len(PARAMETERS)])
     #                                                 if includeparametersinmmd else None,
     #                                                 mask=inp_[:, hadronFlavourIndex] == 4),
 
-    # 'mmd_fixsigma_output_target_hadflav5':
-    #     lambda inp_, out_, target_: mmd_fixsigma_fn(out_, target_,
+    # 'mmdfixsigma_output_target_hadflav5':
+    #     lambda inp_, out_, target_: mmdfixsigma_fn(out_, target_,
     #                                                 parameters=(OneHotEncode(source_idx=onehotencode[2], target_vals=onehotencode[1]).forward(inp_)[:, :len(PARAMETERS)]
     #                                                             if onehotencode else inp_[:, :len(PARAMETERS)])
     #                                                 if includeparametersinmmd else None,
     #                                                 mask=inp_[:, hadronFlavourIndex] == 5),
 
-    # 'mmd_fixsigma_output_target_hadflavSum':
-    #     lambda inp_, out_, target_: hadflav_fraction_0 * mmd_fixsigma_fn(out_, target_,
+    # 'mmdfixsigma_output_target_hadflavSum':
+    #     lambda inp_, out_, target_: hadflav_fraction_0 * mmdfixsigma_fn(out_, target_,
     #                                                                      parameters=(OneHotEncode(source_idx=onehotencode[2], target_vals=onehotencode[1]).forward(inp_)[:, :len(PARAMETERS)]
     #                                                                                  if onehotencode else inp_[:, :len(PARAMETERS)])
     #                                                                      if includeparametersinmmd else None,
     #                                                                      mask=inp_[:, hadronFlavourIndex] == 0) +
-    #                                 hadflav_fraction_4 * mmd_fixsigma_fn(out_, target_,
+    #                                 hadflav_fraction_4 * mmdfixsigma_fn(out_, target_,
     #                                                                      parameters=(OneHotEncode(source_idx=onehotencode[2], target_vals=onehotencode[1]).forward(inp_)[:, :len(PARAMETERS)]
     #                                                                                  if onehotencode else inp_[:, :len(PARAMETERS)])
     #                                                                      if includeparametersinmmd else None,
     #                                                                      mask=inp_[:, hadronFlavourIndex] == 4) +
-    #                                 hadflav_fraction_5 * mmd_fixsigma_fn(out_, target_,
+    #                                 hadflav_fraction_5 * mmdfixsigma_fn(out_, target_,
     #                                                                      parameters=(OneHotEncode(source_idx=onehotencode[2], target_vals=onehotencode[1]).forward(inp_)[:, :len(PARAMETERS)]
     #                                                                                  if onehotencode else inp_[:, :len(PARAMETERS)])
     #                                                                      if includeparametersinmmd else None,
@@ -644,11 +644,11 @@ mdmm_constraints = [my_mdmm.EqConstraint(loss_fns[c[0]], c[1]) for c in mdmm_con
 # if no constraints are specified no MDMM is used and these loss scales are used
 nomdmm_loss_scales = {
 
-    'mmd_fixsigma_output_target': 0.,
-    'mmd_fixsigma_output_target_hadflav0': 0.,
-    'mmd_fixsigma_output_target_hadflav4': 0.,
-    'mmd_fixsigma_output_target_hadflav5': 0.,
-    'mmd_fixsigma_output_target_hadflavSum': 0.,
+    'mmdfixsigma_output_target': 0.,
+    'mmdfixsigma_output_target_hadflav0': 0.,
+    'mmdfixsigma_output_target_hadflav4': 0.,
+    'mmdfixsigma_output_target_hadflav5': 0.,
+    'mmdfixsigma_output_target_hadflavSum': 0.,
 
     'mmd_output_target': 0.,
     'mmd_output_target_hadflav0': 0.,
@@ -692,8 +692,10 @@ csvfile_validation = open(out_path.replace('output', 'traininglog').replace('.ro
 csvwriter_validation = csv.writer(csvfile_validation)
 
 loss_vals = {}
-benchmarks = {loss: 0. for loss in loss_fns}
-start_points = {loss: 0. for loss in loss_fns}
+benchmarks_train = {loss: 0. for loss in loss_fns}
+benchmarks_validation = {loss: 0. for loss in loss_fns}
+start_points_train = {loss: 0. for loss in loss_fns}
+start_points_validation = {loss: 0. for loss in loss_fns}
 end_points_train = {loss: 0. for loss in loss_fns}
 end_points_validation = {loss: 0. for loss in loss_fns}
 iteration = 0
@@ -712,7 +714,7 @@ for epoch in range(num_epochs):
         if is_verbose:
             print('\nevaluate benchmarks and starting points')
 
-        for data_loader in [train_loader, validation_loader]:
+        for data_loader, benchmarks, start_points in zip([train_loader, validation_loader], [benchmarks_train, benchmarks_validation], [start_points_train, start_points_validation]):
             for batch, (inp, target, _) in enumerate(data_loader):
 
                 out = model(inp)
@@ -736,20 +738,26 @@ for epoch in range(num_epochs):
                     start_points[loss] += loss_fns[loss](inp, out, target).item()
 
         for loss in loss_fns:
-            benchmarks[loss] /= len_train_loader + len_validation_loader
-            start_points[loss] /= len_train_loader + len_validation_loader
+            benchmarks_train[loss] /= len_train_loader
+            benchmarks_validation[loss] /= len_validation_loader
+            start_points_train[loss] /= len_train_loader
+            start_points_validation[loss] /= len_validation_loader
 
-        for csvwriter in [csvwriter_train, csvwriter_validation]:
-            csvwriter.writerow(['epoch', 'iteration'] + [loss for loss in loss_fns] + ['lmbda_' + c[0] for c in mdmm_constraints_config])
-            csvwriter.writerow(['benchmark', 'benchmark'] + [benchmarks[loss] for loss in loss_fns] + [c[1] for c in mdmm_constraints_config])
-            csvwriter.writerow(['start', 'start'] + [start_points[loss] for loss in loss_fns] + [c.lmbda.item() for c in mdmm_constraints])
+        csvwriter_train.writerow(['epoch', 'iteration'] + [loss for loss in loss_fns] + ['lmbda_' + c[0] for c in mdmm_constraints_config])
+        csvwriter_train.writerow(['benchmark', 'benchmark'] + [benchmarks_train[loss] for loss in loss_fns] + [c[1] for c in mdmm_constraints_config])
+        csvwriter_train.writerow(['start', 'start'] + [start_points_train[loss] for loss in loss_fns] + [c.lmbda.item() for c in mdmm_constraints])
+        
+        csvwriter_validation.writerow(['epoch', 'iteration'] + [loss for loss in loss_fns] + ['lmbda_' + c[0] for c in mdmm_constraints_config])
+        csvwriter_validation.writerow(['benchmark', 'benchmark'] + [benchmarks_validation[loss] for loss in loss_fns] + [c[1] for c in mdmm_constraints_config])
+        csvwriter_validation.writerow(['start', 'start'] + [start_points_validation[loss] for loss in loss_fns] + [c.lmbda.item() for c in mdmm_constraints])
+
 
         print('\nbenchmarks')
         print(', '.join([loss for loss in loss_fns]))
-        print(', '.join([str(benchmarks[loss]) for loss in loss_fns]))
+        print(', '.join([str(benchmarks_train[loss]) for loss in loss_fns]))
         print('\nstart points')
         print(', '.join([loss for loss in loss_fns]))
-        print(', '.join([str(start_points[loss]) for loss in loss_fns]))
+        print(', '.join([str(start_points_train[loss]) for loss in loss_fns]))
         print('')
 
         if save_snapshots:
