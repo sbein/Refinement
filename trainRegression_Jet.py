@@ -4,6 +4,8 @@ source /cvmfs/sft.cern.ch/lcg/views/LCG_101cuda/x86_64-centos7-gcc8-opt/setup.sh
 - or -
 source /cvmfs/sft.cern.ch/lcg/views/LCG_101/x86_64-centos7-gcc8-opt/setup.sh
 
+to write terminal output to a txt file:
+python trainRegression.py 2>&1 | tee traininglog_regression.txt
 
 #first 
 screen
@@ -17,7 +19,10 @@ cmsenv
 cd /nfs/dust/cms/user/beinsam/FastSim/Refinement/Regress
 source /cvmfs/sft.cern.ch/lcg/views/LCG_101cuda/x86_64-centos7-gcc8-opt/setup.sh
 to write terminal output to a txt file:
+
 python3 trainRegression_Muon.py 2>&1 | tee traininglog_regressionMuon.txt
+python3 trainRegression_Jet.py 2>&1 | tee traininglog_regressionJet.txt
+
 """
 
 import os
@@ -61,22 +66,26 @@ def snapshot(_inp, _target, _out, _epoch, is_transformed=False, plot_kde=True):
     if is_transformed:
         transformed_bins = np.linspace(-15, 15, 7)
         bins = {
-            'GenMuon_pt': transformed_bins,
-            'GenMuon_eta': np.linspace(-6, 6, 7),
-            'RecMuon_mvaMuID': transformed_bins,
-            'RecMuon_softMva': transformed_bins,
-            'RecMuon_mvaLowPt': transformed_bins,
-            'RecMuon_mvaTTH': transformed_bins,
+            'GenJet_pt': transformed_bins,
+            'GenJet_eta': np.linspace(-6, 6, 7),
+            'GenJet_hadronFlavour': np.linspace(-5, 11, 17),
+            'RecJet_hadronFlavour_FastSim': np.linspace(-5, 11, 17),
+            'RecJet_btagDeepFlavB': transformed_bins,
+            'RecJet_btagDeepFlavCvB': transformed_bins,
+            'RecJet_btagDeepFlavCvL': transformed_bins,
+            'RecJet_btagDeepFlavQG': transformed_bins,
         }
     else:
         deepflavbins = np.linspace(-0.5, 1.5, 9)
         bins = {
-            'GenMuon_pt': np.linspace(-500, 1500, 9),
-            'GenMuon_eta': np.linspace(-6, 6, 7),
-            'RecMuon_mvaMuID': deepflavbins,
-            'RecMuon_softMva': deepflavbins,
-            'RecMuon_mvaLowPt': deepflavbins,
-            'RecMuon_mvaTTH': deepflavbins,
+            'GenJet_pt': np.linspace(-500, 1500, 9),
+            'GenJet_eta': np.linspace(-6, 6, 7),
+            'GenJet_hadronFlavour': np.linspace(-5, 11, 17),
+            'RecJet_hadronFlavour_FastSim': np.linspace(-5, 11, 17),
+            'RecJet_btagDeepFlavB': deepflavbins,
+            'RecJet_btagDeepFlavCvB': deepflavbins,
+            'RecJet_btagDeepFlavCvL': deepflavbins,
+            'RecJet_btagDeepFlavQG': deepflavbins,
         }
 
     def myhist(x, **kwargs):
@@ -229,11 +238,15 @@ snapshot_plot_kde = True
 # ##### ##### ##### #####
 '''
 
+# the input file is expected to contain a tree filled with jet triplets: RecJet_x_FastSim, RecJet_x_FullSim, GenJet_y,...
+#in_path = '/nfs/dust/cms/user/wolfmor/Refinement/littletree_CMSSW_12_6_0_TTbar_step2_SIM_RECOBEFMIX_DIGI_L1_DIGI2RAW_L1Reco_RECO_PAT_NANO_coffea_new.root'
 in_path = '/nfs/dust/cms/user/beinsam/FastSim/Refinement/output/mc_fullfast_T1tttt_JetsMuonsElectronsPhotonsTausEvents.root'
-in_tree = 'tMuon'
-preselection = ''#'GenMuon_nearest_dR>0.5&&RecMuon_nearest_dR_FastSim>0.5&&RecMuon_nearest_dR_FullSim>0.5'
+#in_path = '/nfs/dust/cms/user/beinsam/FastSim/Refinement/mc_fullfastnn_1234_step2_SIM_RECOBEFMIX_DIGI_L1_DIGI2RAW_L1Reco_RECO_PAT_NANO_fromNANO_Ootb.root'
+in_tree = 'tJet'
+preselection = ''#'GenJet_nearest_dR>0.5&&RecJet_nearest_dR_FastSim>0.5&&RecJet_nearest_dR_FullSim>0.5'
 
-out_path = '/nfs/dust/cms/user/beinsam/FastSim/Refinement/Regress/TrainingOutput/output_refineMuon_regression_' + training_id + '.root'
+#out_path = '/nfs/dust/cms/user/wolfmor/Refinement/TrainingOutput/output_refinement_regression_' + training_id + '.root'
+out_path = '/nfs/dust/cms/user/beinsam/FastSim/Refinement/Regress/TrainingOutput/output_refineJet_regression_' + training_id + '.root'
 
 
 '''
@@ -258,7 +271,6 @@ adddeepjetconstraintlayer = False
 tiny = 1e-8
 epsilon = torch.finfo(torch.float16).eps / 2.  # = 1 / 2048 = 1 - 0.99951172 (1 - largest number < 1 in 16-bit)
 logitfactor = 1.
-fisherfactor = 0.5# this is the 1/2 that is there in the official definition
 
 
 '''
@@ -270,7 +282,7 @@ fisherfactor = 0.5# this is the 1/2 that is there in the official definition
 if is_test: num_epochs = 2
 else: 
     num_epochs = 100
-    #num_epochs = 5
+    #num_epochs = 2
 
 learning_rate = 1e-5
 lr_scheduler_gamma = 1.
@@ -278,7 +290,7 @@ lr_scheduler_gamma = 1.
 if is_test: batch_size = 4096
 else: batch_size = 4096
 
-batch_size = 1024
+batch_size = 2048
 
 if is_test: num_batches = [2, 2, 2]
 else: num_batches = [500, 100, 200]
@@ -290,26 +302,31 @@ else: num_batches = [500, 100, 200]
 # ##### ##### ##### ##### ##### ##### #####
 '''
 
-onehotencode = ('RecMuon_hadronFlavour_FastSim', [0, 4, 5])  # add one-hot-encoding for given input variable with the given values
-onehotencode = False
+onehotencode = ('RecJet_hadronFlavour_FastSim', [0, 4, 5])  # add one-hot-encoding for given input variable with the given values
+# onehotencode = False
 
 PARAMETERS = [
-    ('GenMuon_pt', []),
-    ('GenMuon_eta', []),
+    ('GenJet_pt', ['tanh200', 'logit']),
+    ('GenJet_eta', []),
+    ('RecJet_hadronFlavour_FastSim', [])
 ]
 
 # if using DeepJetConstraint the DeepJet transformations have to be explicitly adapted in the DeepJetConstraint module
 VARIABLES = [
-    ('RecMuon_mvaMuID_CLASS', ['logit']),
-    ('RecMuon_softMva_CLASS', ['logit']),
-    ('RecMuon_mvaLowPt_CLASS', ['fisher']),
-    ('RecMuon_mvaTTH_CLASS', ['fisher'])
+    ('RecJet_btagDeepFlavB_CLASS', ['logit']),
+    ('RecJet_btagDeepFlavCvB_CLASS', ['logit']),
+    ('RecJet_btagDeepFlavCvL_CLASS', ['logit']),
+    ('RecJet_btagDeepFlavQG_CLASS', ['logit'])
 ]
 
 spectators = [
-    'GenMuon_pt',
-    'GenMuon_eta',
-    'GenMuon_phi'#charge here?
+    'GenJet_pt',
+    'GenJet_eta',
+    'GenJet_phi',
+    'GenJet_mass',
+    'GenJet_hadronFlavour',
+    'GenJet_partonFlavour',
+
 ]
 excludespectators = [var[0] for var in PARAMETERS + VARIABLES]
 SPECTATORS = [
@@ -338,10 +355,10 @@ else:
     rdf = ROOT.RDataFrame(in_tree, in_path).Filter('1').Range(ntrain + nval + ntest)
 
 #print('looking for something like print branches', dir(rdf))
-column_names = rdf.GetColumnNames()
-print("Branches/Columns in the DataFrame:")
-for name in column_names:
-    print(name)
+#column_names = rdf.GetColumnNames()
+#print("Branches/Columns in the DataFrame:")
+#for name in column_names:
+#    print(name)
 
 dict_input = rdf.AsNumpy([n[0].replace('CLASS', 'FastSim') for n in PARAMETERS + VARIABLES if '_ohe_' not in n[0]])
 dict_target = rdf.AsNumpy([n[0].replace('CLASS', 'FullSim') for n in VARIABLES])
@@ -385,14 +402,19 @@ len_test_loader = len(test_loader)
 # ##### ##### ##### ##### ##### ##### #####
 '''
 
+hadronFlavourIndex = [name[0] for name in PARAMETERS].index('RecJet_hadronFlavour_FastSim')
+
+len_data_input = len(data_input)
+hadflav_fraction_0 = len(data_input[data_input[:, hadronFlavourIndex] == 0]) / len_data_input
+hadflav_fraction_4 = len(data_input[data_input[:, hadronFlavourIndex] == 4]) / len_data_input
+hadflav_fraction_5 = len(data_input[data_input[:, hadronFlavourIndex] == 5]) / len_data_input
+
+
 deepjetindicesWithParameters = [idx for idx, name in enumerate(PARAMETERS + VARIABLES) if 'Jet_btagDeepFlav' in name[0]]
 deepjetindicesWithoutParameters = [idx for idx, name in enumerate(VARIABLES) if 'Jet_btagDeepFlav' in name[0]]
 
 logitmaskWithParameters = [int('logit' in name[1]) for name in PARAMETERS + VARIABLES]
 logitmaskWithoutParameters = [int('logit' in name[1]) for name in VARIABLES]
-
-fishermaskWithParameters = [int('fisher' in name[1]) for name in PARAMETERS + VARIABLES]
-fishermaskWithoutParameters = [int('fisher' in name[1]) for name in VARIABLES]
 
 tanh200maskWithParameters = [int('tanh200' in name[1]) for name in PARAMETERS + VARIABLES]
 tanh200maskWithoutParameters = [int('tanh200' in name[1]) for name in VARIABLES]
@@ -435,7 +457,6 @@ model = nn.Sequential()
 
 if any(tanh200maskWithParameters): model.add_module('Tanh200Transform', TanhTransform(mask=tanh200maskWithParameters, norm=200))
 if any(logitmaskWithParameters): model.add_module('LogitTransform', LogitTransform(mask=logitmaskWithParameters, factor=logitfactor, onnxcompatible=onnxcompatible, eps=epsilon, tiny=tiny))
-if any(fishermaskWithParameters): model.add_module('FisherTransform', FisherTransform(mask=fishermaskWithParameters, factor=fisherfactor, onnxcompatible=onnxcompatible, eps=epsilon, tiny=tiny))
 
 if onehotencode: model.add_module('OneHotEncode_' + onehotencode[0], OneHotEncode(source_idx=onehotencode[2], target_vals=onehotencode[1]))
 
@@ -476,7 +497,6 @@ for k in range(num_skipblocks - 1):
                                                                                           dropout=dropout))
 
 if any(logitmaskWithoutParameters): model.add_module('LogitTransformBack', LogitTransformBack(mask=logitmaskWithoutParameters, factor=logitfactor))
-if any(fishermaskWithoutParameters): model.add_module('FisherTransformBack', FisherTransformBack(mask=fishermaskWithoutParameters, factor=fisherfactor))
 if any(tanh200maskWithoutParameters): model.add_module('Tanh200TransformBack', TanhTransformBack(mask=tanh200maskWithoutParameters, norm=200))
 
 if castto16bit:
@@ -512,11 +532,88 @@ loss_fns = {
                                                                if onehotencode else inp_[:, :len(PARAMETERS)])
                                                    if includeparametersinmmd else None),
 
+    # 'mmdfixsigma_output_target_hadflav0':
+    #     lambda inp_, out_, target_: mmdfixsigma_fn(out_, target_,
+    #                                                 parameters=(OneHotEncode(source_idx=onehotencode[2], target_vals=onehotencode[1]).forward(inp_)[:, :len(PARAMETERS)]
+    #                                                             if onehotencode else inp_[:, :len(PARAMETERS)])
+    #                                                 if includeparametersinmmd else None,
+    #                                                 mask=inp_[:, hadronFlavourIndex] == 0),
+
+    # 'mmdfixsigma_output_target_hadflav4':
+    #     lambda inp_, out_, target_: mmdfixsigma_fn(out_, target_,
+    #                                                 parameters=(OneHotEncode(source_idx=onehotencode[2], target_vals=onehotencode[1]).forward(inp_)[:, :len(PARAMETERS)]
+    #                                                             if onehotencode else inp_[:, :len(PARAMETERS)])
+    #                                                 if includeparametersinmmd else None,
+    #                                                 mask=inp_[:, hadronFlavourIndex] == 4),
+
+    # 'mmdfixsigma_output_target_hadflav5':
+    #     lambda inp_, out_, target_: mmdfixsigma_fn(out_, target_,
+    #                                                 parameters=(OneHotEncode(source_idx=onehotencode[2], target_vals=onehotencode[1]).forward(inp_)[:, :len(PARAMETERS)]
+    #                                                             if onehotencode else inp_[:, :len(PARAMETERS)])
+    #                                                 if includeparametersinmmd else None,
+    #                                                 mask=inp_[:, hadronFlavourIndex] == 5),
+
+    # 'mmdfixsigma_output_target_hadflavSum':
+    #     lambda inp_, out_, target_: hadflav_fraction_0 * mmdfixsigma_fn(out_, target_,
+    #                                                                      parameters=(OneHotEncode(source_idx=onehotencode[2], target_vals=onehotencode[1]).forward(inp_)[:, :len(PARAMETERS)]
+    #                                                                                  if onehotencode else inp_[:, :len(PARAMETERS)])
+    #                                                                      if includeparametersinmmd else None,
+    #                                                                      mask=inp_[:, hadronFlavourIndex] == 0) +
+    #                                 hadflav_fraction_4 * mmdfixsigma_fn(out_, target_,
+    #                                                                      parameters=(OneHotEncode(source_idx=onehotencode[2], target_vals=onehotencode[1]).forward(inp_)[:, :len(PARAMETERS)]
+    #                                                                                  if onehotencode else inp_[:, :len(PARAMETERS)])
+    #                                                                      if includeparametersinmmd else None,
+    #                                                                      mask=inp_[:, hadronFlavourIndex] == 4) +
+    #                                 hadflav_fraction_5 * mmdfixsigma_fn(out_, target_,
+    #                                                                      parameters=(OneHotEncode(source_idx=onehotencode[2], target_vals=onehotencode[1]).forward(inp_)[:, :len(PARAMETERS)]
+    #                                                                                  if onehotencode else inp_[:, :len(PARAMETERS)])
+    #                                                                      if includeparametersinmmd else None,
+    #                                                                      mask=inp_[:, hadronFlavourIndex] == 5),
+
     'mmd_output_target':
         lambda inp_, out_, target_: mmd_fn(out_, target_,
                                            parameters=(OneHotEncode(source_idx=onehotencode[2], target_vals=onehotencode[1]).forward(inp_)[:, :len(PARAMETERS)]
                                                        if onehotencode else inp_[:, :len(PARAMETERS)])
                                            if includeparametersinmmd else None),
+
+    'mmd_output_target_hadflav0':
+        lambda inp_, out_, target_: mmd_fn(out_, target_,
+                                           parameters=(OneHotEncode(source_idx=onehotencode[2], target_vals=onehotencode[1]).forward(inp_)[:, :len(PARAMETERS)]
+                                                       if onehotencode else inp_[:, :len(PARAMETERS)])
+                                           if includeparametersinmmd else None,
+                                           mask=inp_[:, hadronFlavourIndex] == 0),
+
+    'mmd_output_target_hadflav4':
+        lambda inp_, out_, target_: mmd_fn(out_, target_,
+                                           parameters=(OneHotEncode(source_idx=onehotencode[2], target_vals=onehotencode[1]).forward(inp_)[:, :len(PARAMETERS)]
+                                                       if onehotencode else inp_[:, :len(PARAMETERS)])
+                                           if includeparametersinmmd else None,
+                                           mask=inp_[:, hadronFlavourIndex] == 4),
+
+    'mmd_output_target_hadflav5':
+        lambda inp_, out_, target_: mmd_fn(out_, target_,
+                                           parameters=(OneHotEncode(source_idx=onehotencode[2], target_vals=onehotencode[1]).forward(inp_)[:, :len(PARAMETERS)]
+                                                       if onehotencode else inp_[:, :len(PARAMETERS)])
+                                           if includeparametersinmmd else None,
+                                           mask=inp_[:, hadronFlavourIndex] == 5),
+
+    'mmd_output_target_hadflavSum':
+        lambda inp_, out_, target_: hadflav_fraction_0 * mmd_fn(out_, target_,
+                                                                parameters=(OneHotEncode(source_idx=onehotencode[2], target_vals=onehotencode[1]).forward(inp_)[:, :len(PARAMETERS)]
+                                                                            if onehotencode else inp_[:, :len(PARAMETERS)])
+                                                                if includeparametersinmmd else None,
+                                                                mask=inp_[:, hadronFlavourIndex] == 0) +
+                                    hadflav_fraction_4 * mmd_fn(out_, target_,
+                                                                parameters=(OneHotEncode(source_idx=onehotencode[2], target_vals=onehotencode[1]).forward(inp_)[:, :len(PARAMETERS)]
+                                                                            if onehotencode else inp_[:, :len(PARAMETERS)])
+                                                                if includeparametersinmmd else None,
+                                                                mask=inp_[:, hadronFlavourIndex] == 4) +
+                                    hadflav_fraction_5 * mmd_fn(out_, target_,
+                                                                parameters=(OneHotEncode(source_idx=onehotencode[2], target_vals=onehotencode[1]).forward(inp_)[:, :len(PARAMETERS)]
+                                                                            if onehotencode else inp_[:, :len(PARAMETERS)])
+                                                                if includeparametersinmmd else None,
+                                                                mask=inp_[:, hadronFlavourIndex] == 5),
+
     'mse_output_target':
         lambda inp_, out_, target_: mse_fn(out_, target_),
 
@@ -534,6 +631,18 @@ loss_fns = {
 
     'huber_input_output':
         lambda inp_, out_, target_: huber_fn(inp_[:, real_len_parameters:], out_),
+
+    'deepjetsum_mean':
+        lambda inp_, out_, target_: SelectDeepJets(deepjetindices=deepjetindicesWithoutParameters,
+                                                   sigmoidtransform=calculatelosseswithtransformedvariables,
+                                                   nanotransform=True).forward(out_).sum(dim=1).mean(),
+
+    'deepjetsum_std':
+        lambda inp_, out_, target_: SelectDeepJets(deepjetindices=deepjetindicesWithoutParameters,
+                                                   sigmoidtransform=calculatelosseswithtransformedvariables,
+                                                   nanotransform=True).forward(out_).sum(dim=1).std(),
+
+
 }
 
 # if constraints are specified MDMM algorithm will be used
@@ -543,20 +652,32 @@ mdmm_constraints_config = [
     ('deepjetsum_std', 0.001),
     # ('huber_output_target', 0.00053),
 ]
-mdmm_constraints = []#As Moritz if this should be made an empty list
-#[my_mdmm.EqConstraint(loss_fns[c[0]], c[1]) for c in mdmm_constraints_config]
+mdmm_constraints = [my_mdmm.EqConstraint(loss_fns[c[0]], c[1]) for c in mdmm_constraints_config]
 
 # if no constraints are specified no MDMM is used and these loss scales are used
 nomdmm_loss_scales = {
 
     'mmdfixsigma_output_target': 0.,
-    'mmd_output_target': 1.,##Ask Moritz if this would be right to have changed
+    'mmdfixsigma_output_target_hadflav0': 0.,
+    'mmdfixsigma_output_target_hadflav4': 0.,
+    'mmdfixsigma_output_target_hadflav5': 0.,
+    'mmdfixsigma_output_target_hadflavSum': 0.,
+
+    'mmd_output_target': 0.,
+    'mmd_output_target_hadflav0': 0.,
+    'mmd_output_target_hadflav4': 0.,
+    'mmd_output_target_hadflav5': 0.,
+    'mmd_output_target_hadflavSum': 1.,
+
     'mse_output_target': 0.,
     'mse_input_output': 0.,
     'mae_output_target': 0.,
     'mae_input_output': 0.,
     'huber_output_target': 0.,
     'huber_input_output': 0.,
+
+    'deepjetsum_mean': 0.,
+    'deepjetsum_std': 0.,
 }
 
 if len(mdmm_constraints) > 0:
@@ -624,12 +745,6 @@ for epoch in range(num_epochs):
                     if any(logitmaskWithoutParameters):
                         target = LogitTransform(mask=logitmaskWithoutParameters, factor=logitfactor, onnxcompatible=False, eps=epsilon, tiny=tiny).forward(target)
                         out = LogitTransform(mask=logitmaskWithoutParameters, factor=logitfactor, onnxcompatible=False, eps=epsilon, tiny=tiny).forward(out)
-                        
-                    if any(fishermaskWithParameters):
-                        inp = FisherTransform(mask=fishermaskWithParameters, factor=fisherfactor, onnxcompatible=False, eps=epsilon, tiny=tiny).forward(inp)
-                    if any(fishermaskWithoutParameters):
-                        target = FisherTransform(mask=fishermaskWithoutParameters, factor=fisherfactor, onnxcompatible=False, eps=epsilon, tiny=tiny).forward(target)
-                        out = FisherTransform(mask=fishermaskWithoutParameters, factor=fisherfactor, onnxcompatible=False, eps=epsilon, tiny=tiny).forward(out)                        
 
                 for loss in loss_fns:
                     benchmarks[loss] += loss_fns[loss](inp, inp[:, real_len_parameters:], target).item()
@@ -689,12 +804,6 @@ for epoch in range(num_epochs):
                     if any(logitmaskWithoutParameters):
                         target = LogitTransform(mask=logitmaskWithoutParameters, factor=logitfactor, onnxcompatible=False, eps=epsilon, tiny=tiny).forward(target)
                         out = LogitTransform(mask=logitmaskWithoutParameters, factor=logitfactor, onnxcompatible=False, eps=epsilon, tiny=tiny).forward(out)
-                        
-                    if any(fishermaskWithParameters):
-                        inp = FisherTransform(mask=fishermaskWithParameters, factor=fisherfactor, onnxcompatible=False, eps=epsilon, tiny=tiny).forward(inp)
-                    if any(fishermaskWithoutParameters):
-                        target = FisherTransform(mask=fishermaskWithoutParameters, factor=fisherfactor, onnxcompatible=False, eps=epsilon, tiny=tiny).forward(target)
-                        out = FisherTransform(mask=fishermaskWithoutParameters, factor=fisherfactor, onnxcompatible=False, eps=epsilon, tiny=tiny).forward(out)                        
 
                     if batch == 0:
                         inp_list_transformed = inp
@@ -734,12 +843,6 @@ for epoch in range(num_epochs):
             if any(logitmaskWithoutParameters):
                 target = LogitTransform(mask=logitmaskWithoutParameters, factor=logitfactor, onnxcompatible=False, eps=epsilon, tiny=tiny).forward(target)
                 out = LogitTransform(mask=logitmaskWithoutParameters, factor=logitfactor, onnxcompatible=False, eps=epsilon, tiny=tiny).forward(out)
-                
-            if any(fishermaskWithParameters):
-                inp = FisherTransform(mask=fishermaskWithParameters, factor=fisherfactor, onnxcompatible=False, eps=epsilon, tiny=tiny).forward(inp)
-            if any(fishermaskWithoutParameters):
-                target = FisherTransform(mask=fishermaskWithoutParameters, factor=fisherfactor, onnxcompatible=False, eps=epsilon, tiny=tiny).forward(target)
-                out = FisherTransform(mask=fishermaskWithoutParameters, factor=fisherfactor, onnxcompatible=False, eps=epsilon, tiny=tiny).forward(out)                
 
         for loss in loss_fns:
             loss_vals[loss] = loss_fns[loss](inp, out, target)
@@ -807,12 +910,6 @@ for epoch in range(num_epochs):
                 if any(logitmaskWithoutParameters):
                     target = LogitTransform(mask=logitmaskWithoutParameters, factor=logitfactor, onnxcompatible=False, eps=epsilon, tiny=tiny).forward(target)
                     out = LogitTransform(mask=logitmaskWithoutParameters, factor=logitfactor, onnxcompatible=False, eps=epsilon, tiny=tiny).forward(out)
-                    
-                if any(fishermaskWithParameters):
-                    inp = FisherTransform(mask=fishermaskWithParameters, factor=fisherfactor, onnxcompatible=False, eps=epsilon, tiny=tiny).forward(inp)
-                if any(fishermaskWithoutParameters):
-                    target = FisherTransform(mask=fishermaskWithoutParameters, factor=fisherfactor, onnxcompatible=False, eps=epsilon, tiny=tiny).forward(target)
-                    out = FisherTransform(mask=fishermaskWithoutParameters, factor=fisherfactor, onnxcompatible=False, eps=epsilon, tiny=tiny).forward(out)                    
 
             if save_snapshots and epoch % snapshot_everyXepoch == 0 and batch < snapshot_num_batches:
                 if batch == 0:
@@ -875,12 +972,10 @@ for epoch in range(num_epochs):
 # save model
 # ##### ##### #####
 '''
-print('saving model')
+print('\nsaving model')
 
 m = torch.jit.script(model)
-outfilename = out_path.replace('output', 'model').replace('.root', '.pt')
-print('in', outfilename)
-torch.jit.save(m, outfilename)
+torch.jit.save(m, out_path.replace('output', 'model').replace('.root', '.pt'))
 print('\njust created ' + out_path.replace('output', 'model').replace('.root', '.pt'))
 
 
@@ -953,7 +1048,7 @@ for branch in out_dict:
     out_dict[branch] = torch.cat(out_dict[branch]).detach().cpu().numpy()
 
 out_rdf = ROOT.RDF.MakeNumpyDataFrame(out_dict)
-out_rdf.Snapshot('tMuon', out_path)
+out_rdf.Snapshot('tJet', out_path)
 print('just created ' + out_path)
 
 csvfile_train.close()
