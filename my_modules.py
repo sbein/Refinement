@@ -121,8 +121,6 @@ class LogitTransformBack(nn.Module):
 
         return torch.t(x_)
 
-import torch
-import torch.nn as nn
 
 class FisherTransform(nn.Module):
     """
