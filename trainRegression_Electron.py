@@ -15,8 +15,8 @@ torefinement
 cmsenv
 cd /nfs/dust/cms/user/beinsam/FastSim/Refinement/Regress
 source /cvmfs/sft.cern.ch/lcg/views/LCG_101cuda/x86_64-centos7-gcc8-opt/setup.sh
-to write terminal output to a txt file:
-python3 trainRegression_Muon.py 2>&1 | tee traininglog_regressionMuon.txt
+#to write terminal output to a txt file:
+python3 trainRegression_Electron.py 2>&1 | tee traininglog_regressionElectron.txt
 """
 
 import os
@@ -54,10 +54,10 @@ verbosity = 10
 '''
 
 in_path = '/nfs/dust/cms/user/beinsam/FastSim/Refinement/output/mc_fullfast_T1tttt_JetsMuonsElectronsPhotonsTausEvents.root'
-in_tree = 'tMuon'
-preselection = ''#'GenMuon_nearest_dR>0.5&&RecMuon_nearest_dR_FastSim>0.5&&RecMuon_nearest_dR_FullSim>0.5'
-preselection = "RecMuon_mvaMuID_FastSim > -1 && RecMuon_mvaMuID_FullSim > -1 && RecMuon_softMva_FastSim > -1 && RecMuon_softMva_FullSim > -1"
-out_path = '/nfs/dust/cms/user/beinsam/FastSim/Refinement/Regress/TrainingOutput/output_refineMuon_regression_' + training_id + '.root'
+in_tree = 'tElectron'
+preselection = ''#'GenElectron_nearest_dR>0.5&&RecElectron_nearest_dR_FastSim>0.5&&RecElectron_nearest_dR_FullSim>0.5'
+preselection = "RecElectron_mvaMuID_FastSim > -1 && RecElectron_mvaMuID_FullSim > -1 && RecElectron_softMva_FastSim > -1 && RecElectron_softMva_FullSim > -1"
+out_path = '/nfs/dust/cms/user/beinsam/FastSim/Refinement/Regress/TrainingOutput/output_refineElectron_regression_' + training_id + '.root'
 
 
 '''
@@ -93,12 +93,14 @@ fisherfactor = 1.0# this is the 1/2 that is there in the official definition
 
 if is_test: num_epochs = 2
 else: 
+    num_epochs = 100
+    num_epochs = 1000
     num_epochs = 2000
-    #num_epochs = 100
-    #num_epochs = 5
-    num_epochs = 0
 
-learning_rate = 3e-5
+    #num_epochs = 5
+    #num_epochs = 0
+
+learning_rate = 2e-5#was 1e-5
 lr_scheduler_gamma = 1.
 
 if is_test: batch_size = 4096
@@ -107,7 +109,7 @@ else: batch_size = 4096
 batch_size = 1024
 
 if is_test: num_batches = [2, 2, 2]
-else: num_batches = [500, 100, 200]
+else: num_batches = [250, 50, 100]
 
 
 '''
@@ -116,26 +118,48 @@ else: num_batches = [500, 100, 200]
 # ##### ##### ##### ##### ##### ##### #####
 '''
 
-onehotencode = ('RecMuon_hadronFlavour_FastSim', [0, 4, 5])  # add one-hot-encoding for given input variable with the given values
+onehotencode = ('RecElectron_hadronFlavour_FastSim', [0, 4, 5])  # add one-hot-encoding for given input variable with the given values
 onehotencode = False
 
 PARAMETERS = [
-    ('GenMuon_pt', []),
-    ('GenMuon_eta', []),
+    ('GenElectron_pt', []),
+    ('GenElectron_eta', []),
 ]
 
 # if using DeepJetConstraint the DeepJet transformations have to be explicitly adapted in the DeepJetConstraint module
 VARIABLES = [
-    ('RecMuon_mvaMuID_CLASS', ['logit']),
-    ('RecMuon_softMva_CLASS', ['logit']),
-    ('RecMuon_mvaLowPt_CLASS', ['fisher']),
-    ('RecMuon_mvaTTH_CLASS', ['fisher'])
+    ('RecElectron_dxy_CLASS', []),
+    ('RecElectron_dxyErr_CLASS', []),
+    ('RecElectron_dz_CLASS', []),
+    ('RecElectron_dzErr_CLASS', []),
+    ('RecElectron_eInvMinusPInv_CLASS', []),
+    ('RecElectron_energyErr_CLASS', []),
+    ('RecElectron_eta_CLASS', []),
+    ('RecElectron_hoe_CLASS', []),
+    ('RecElectron_ip3d_CLASS', []),
+    ('RecElectron_jetPtRelv2_CLASS', []),
+    ('RecElectron_jetRelIso_CLASS', []),
+    ('RecElectron_mass_CLASS', []),
+    ('RecElectron_miniPFRelIso_all_CLASS', []),
+    ('RecElectron_miniPFRelIso_chg_CLASS', []),
+    ('RecElectron_mvaHZZIso_CLASS', []),
+    ('RecElectron_mvaIso_CLASS', []),
+    ('RecElectron_mvaNoIso_CLASS', []),
+    ('RecElectron_pfRelIso03_all_CLASS', []),
+    ('RecElectron_pfRelIso03_chg_CLASS', []),
+    ('RecElectron_phi_CLASS', []),
+    ('RecElectron_pt_CLASS', []),
+    ('RecElectron_r9_CLASS', []),
+    ('RecElectron_scEtOverPt_CLASS', []),
+    ('RecElectron_sieie_CLASS', []),
+    ('RecElectron_sip3d_CLASS', []),
+    ('RecElectron_mvaTTH_CLASS', [])
 ]
 
 spectators = [
-    'GenMuon_pt',
-    'GenMuon_eta',
-    'GenMuon_phi'#charge here?
+    'GenElectron_pt',
+    'GenElectron_eta',
+    'GenElectron_phi'#charge here?
 ]
 excludespectators = [var[0] for var in PARAMETERS + VARIABLES]
 SPECTATORS = [
@@ -716,7 +740,7 @@ for branch in out_dict:
     out_dict[branch] = torch.cat(out_dict[branch]).detach().cpu().numpy()
 
 out_rdf = ROOT.RDF.MakeNumpyDataFrame(out_dict)
-out_rdf.Snapshot('tMuon', out_path)
+out_rdf.Snapshot('tElectron', out_path)
 print('just created ' + out_path)
 
 csvfile_train.close()
