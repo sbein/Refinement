@@ -122,6 +122,60 @@ class LogitTransformBack(nn.Module):
         return torch.t(x_)
 
 
+class FisherTransform(nn.Module):
+    """
+    Applies the Fisher transform to the input data.
+    Transforms data using (1/2)*log((1+x)/(1-x))  for x in range (-1, 1).
+    This transformation is applied selectively based on a provided mask.
+    """
+
+    def __init__(self, mask, eps=1e-6, tiny=1e-6, factor=0.5, onnxcompatible=False):
+        super(FisherTransform, self).__init__()
+
+        self._mask = mask
+        self.register_buffer('_eps', torch.tensor(eps))
+        self.register_buffer('_tiny', torch.tensor(tiny))
+        self.register_buffer('_factor', torch.tensor(factor))
+        self._onnxcompatible = onnxcompatible
+
+    def forward(self, x):
+        xt = torch.t(x)
+        x_ = torch.empty_like(xt)
+        for idim, dim in enumerate(xt):
+            if self._mask[idim]:
+                dim = torch.clamp(dim, min=-1.+self._eps, max=1.-self._eps)  # Ensure x is in the (-1, 1) range
+                x_[idim] = self._factor * torch.log((1 + dim) / (1 - dim))
+            else:
+                x_[idim] = dim
+
+        return torch.t(x_)
+
+
+class FisherTransformBack(nn.Module):
+    """
+    Applies the inverse of the Fisher transform to the input data.
+    Transforms data back using the inverse function of the Fisher transformation.
+    This transformation is applied selectively based on a provided mask.
+    """
+
+    def __init__(self, mask, factor=0.5):
+        super(FisherTransformBack, self).__init__()
+
+        self._mask = mask
+        self.register_buffer('_factor', torch.tensor(factor))
+
+    def forward(self, x):
+        xt = torch.t(x)
+        x_ = torch.empty_like(xt)
+        for idim, dim in enumerate(xt):
+            if self._mask[idim]:
+                x_[idim] = (torch.exp( dim / self._factor) - 1) / (torch.exp( dim / self._factor) + 1)
+            else:
+                x_[idim] = dim
+
+        return torch.t(x_)
+
+
 class OneHotEncode(nn.Module):
     def __init__(self, source_idx, target_vals, eps=1.):
 
