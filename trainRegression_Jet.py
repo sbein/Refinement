@@ -20,7 +20,6 @@ cd /nfs/dust/cms/user/beinsam/FastSim/Refinement/Regress
 source /cvmfs/sft.cern.ch/lcg/views/LCG_101cuda/x86_64-centos7-gcc8-opt/setup.sh
 to write terminal output to a txt file:
 
-python3 trainRegression_Muon.py 2>&1 | tee traininglog_regressionMuon.txt
 python3 trainRegression_Jet.py 2>&1 | tee traininglog_regressionJet.txt
 
 """
@@ -281,7 +280,7 @@ logitfactor = 1.
 
 if is_test: num_epochs = 2
 else: 
-    num_epochs = 100
+    num_epochs = 1000
     #num_epochs = 2
 
 learning_rate = 1e-5
