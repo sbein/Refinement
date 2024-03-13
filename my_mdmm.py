@@ -23,12 +23,12 @@ class ConstraintReturn:
 class Constraint(nn.Module, metaclass=abc.ABCMeta):
     """The base class for all constraint types."""
 
-    def __init__(self, fn, scale, damping):
+    def __init__(self, fn, scale, damping, lmbda_init=0.):
         super().__init__()
         self.fn = fn
         self.register_buffer('scale', torch.as_tensor(scale))
         self.register_buffer('damping', torch.as_tensor(damping))
-        self.lmbda = nn.Parameter(torch.tensor(0.))
+        self.lmbda = nn.Parameter(torch.tensor(lmbda_init))
 
     def extra_repr(self):
         return f'scale={self.scale:g}, damping={self.damping:g}'
@@ -56,8 +56,8 @@ class Constraint(nn.Module, metaclass=abc.ABCMeta):
 class EqConstraint(Constraint):
     """Represents an equality constraint."""
 
-    def __init__(self, fn, value, scale=1., damping=1.):
-        super().__init__(fn, scale, damping)
+    def __init__(self, fn, value, scale=1., damping=1., lmbda_init=0.):
+        super().__init__(fn, scale, damping, lmbda_init)
         self.register_buffer('value', torch.as_tensor(value))
 
     def extra_repr(self):
