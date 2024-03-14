@@ -228,20 +228,17 @@ class LinearWithSkipConnection(nn.Module):
             self._linears.append(nn.Linear(in_features=self._in_features if i == 0 else self._hidden_features,
                                            out_features=self._out_features if i == self._nskiplayers-1 else self._hidden_features))
 
-            #nn.init.normal_(self._linears[-1].weight, mean=0.0, std=0.0001)
-            #nn.init.normal_(self._linears[-1].bias, mean=0.0, std=0.0001)
-            #
-            #print('nn.init', dir(nn.init))
-            #exit(0)
-            #nn.init.kaiming_normal_(self._linears[-1].weight, mode='fan_out', nonlinearity='leaky_relu')
+            # nn.init.normal_(self._linears[-1].weight, mean=0.0, std=0.001)
+            # nn.init.normal_(self._linears[-1].bias, mean=0.0, std=0.001)
+
+            # nn.init.zeros_(self._linears[-1].weight)
+            # nn.init.zeros_(self._linears[-1].bias)
+
             if i == 0:
                 nn.init.kaiming_normal_(self._linears[-1].weight, a=0.01, mode='fan_in', nonlinearity='leaky_relu')
             else:
-                nn.init.zeros_(self._linears[-1].weight)            
-            #nn.init.constant_(self._linears[-1].bias, 0)
-            
-            #nn.init.uniform_(self._linears[-1].weight, a=-0.0001, b=0.0001)
-            nn.init.uniform_(self._linears[-1].bias, a=-0.0001, b=0.0001)
+                nn.init.zeros_(self._linears[-1].weight)
+            nn.init.zeros_(self._linears[-1].bias)
 
             self._leakyrelus.append(nn.LeakyReLU())
 
