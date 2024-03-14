@@ -54,7 +54,7 @@ class MMD(nn.Module):
         if fix_sigma is None:
             bandwidth = torch.sum(L2_distance.data) / (n_samples**2-n_samples)
         else:
-            bandwidth = fix_sigma if torch.is_tensor(fix_sigma) else torch.tensor(fix_sigma)
+            bandwidth = fix_sigma.detach().clone() if torch.is_tensor(fix_sigma) else torch.tensor(fix_sigma)
         if one_sided_bandwidth:
             bandwidth /= kernel_mul ** (kernel_num - 1)
         else:
@@ -99,6 +99,9 @@ class MMD(nn.Module):
 
                 self.fix_sigma_target_only = torch.sum(L2_distance.data) / (n_samples**2-n_samples)
 
+                print('\ncalculated BW to be:')
+                print(self.fix_sigma_target_only)
+
             sigma = self.fix_sigma_target_only
 
         elif self.calculate_fix_sigma_for_each_dimension_with_target_only:
@@ -120,6 +123,9 @@ class MMD(nn.Module):
                 L2_distance = ((total0-total1)**2).sum((0, 1))
 
                 self.fix_sigma_target_only_by_dimension = L2_distance.data / (n_samples**2-n_samples)
+
+                print('\ncalculated BWs by dimension to be:')
+                print(self.fix_sigma_target_only_by_dimension)
 
             sigma = self.fix_sigma_target_only_by_dimension
 
@@ -154,6 +160,7 @@ class MMD(nn.Module):
         kernels = MMD.gaussian_kernel(source, target, kernel_mul=self.kernel_mul, kernel_num=self.kernel_num, fix_sigma=sigma,
                                       one_sided_bandwidth=self.one_sided_bandwidth, bandwidth_by_dimension=self.calculate_fix_sigma_for_each_dimension_with_target_only,
                                       l2dist_out=l2dist_out)
+
         XX = kernels[:batch_size, :batch_size]
         YY = kernels[batch_size:, batch_size:]
         XY = kernels[:batch_size, batch_size:]
