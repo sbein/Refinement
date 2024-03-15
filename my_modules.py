@@ -14,6 +14,60 @@ class Dummy(nn.Module):
         return x[:, self._n_params:]
 
 
+class LogTransform(nn.Module):
+    """
+        Returns natural log-transformed values in range (-inf,inf)
+        if abs(x) < eps, then x is clamped to eps
+        LogTransform ==> log_e(x)
+        Dorukhan Boncukçu
+
+    """
+
+    def __init__(self, mask, eps=1e-6):
+
+        super(LogTransform, self).__init__()
+
+        self._mask = mask
+        self.register_buffer('_eps', torch.tensor(eps))
+
+    def forward(self, x):
+
+        xt = torch.t(x)
+        x_ = torch.empty_like(xt)
+        for idim, dim in enumerate(xt):
+            if self._mask[idim]:
+                dim = torch.clamp(torch.abs(dim), min=self._eps)
+                x_[idim] = torch.log10(dim)
+            else:
+                x_[idim] = dim
+
+        return torch.t(x_)
+
+
+class LogTransformBack(nn.Module):
+    """
+        Dorukhan Boncukçu
+    """
+
+    def __init__(self, mask):
+
+        super(LogTransformBack, self).__init__()
+        self._mask = mask
+
+    def forward(self, x):
+
+        xt = torch.t(x)
+        x_ = torch.empty_like(xt)
+        for idim, dim in enumerate(xt):
+            if self._mask[idim]:
+                x_[idim] = torch.pow(10, dim)
+                #x_[idim] = torch.exp(dim)
+            else:
+                x_[idim] = dim
+
+        return torch.t(x_)
+
+
 class TanhTransform(nn.Module):
     """Returns tanh-transformed values in range
     (-1,0) for x<0
