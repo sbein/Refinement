@@ -14,7 +14,7 @@ class Dummy(nn.Module):
         return x[:, self._n_params:]
 
 
-class LogTransform(nn.Module):
+class Log10Transform(nn.Module):
     """
         Returns natural log-transformed values in range (-inf,inf)
         if abs(x) < eps, then x is clamped to eps
@@ -23,7 +23,7 @@ class LogTransform(nn.Module):
 
     """
 
-    def __init__(self, mask, eps=1e-6):
+    def __init__(self, mask, base=10, eps=1e-6):
 
         super(LogTransform, self).__init__()
 
@@ -44,7 +44,7 @@ class LogTransform(nn.Module):
         return torch.t(x_)
 
 
-class LogTransformBack(nn.Module):
+class Log10TransformBack(nn.Module, base=10):
     """
         Dorukhan Boncukçu
     """
