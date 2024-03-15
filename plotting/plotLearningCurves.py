@@ -28,24 +28,31 @@ def read_csv(filepath):
         nepochs_ = int(row[0]) + 1
         nbatches_ = int(rows / nepochs_)
 
+    print('starts', starts)
     return nepochs_, nbatches_, \
         {v[0]: np.array(v[1:]) for v in values}, \
         {b[0]: np.array(b[1]) for b in benchmarks}, \
-        {s[0]: np.array(s[1]) for s in starts}
+        {s[0]: np.array(s[1]) for s in starts if len(s)>1}
 
 
 # specify the training_id and where the csv output file is (TRAININGID will be replaced by the training_id)
-in_path = '/nfs/dust/cms/user/wolfmor/Refinement/TrainingOutput/traininglog_refinement_regression_TRAININGID'
-training_id = '20231105_1'
+#in_path = '/nfs/dust/cms/user/beinsam/FastSim/Refinement/Regress/traininglog_refinement_regression_TRAININGID'
+#in_path = '/nfs/dust/cms/user/beinsam/FastSim/Refinement/Regress/FestTrainingOutput/traininglog_refineJet_regression_TRAININGID'
+in_path = '/nfs/dust/cms/user/beinsam/FastSim/Refinement/Regress/TrainingOutput/traininglog_refineMuon_regression_TRAININGID'
+#in_path = '/nfs/dust/cms/user/beinsam/FastSim/Refinement/Regress/TrainingOutput//traininglog_refineElectron_regression_TRAININGID'
+#training_id = '202403092142'
+training_id = '202403132326'
 
-# specify where the plot should be saved
-out_path = 'learning_curves_' + training_id + '.png'
-
+# with training ID:
+#out_path = 'LCs_' + in_path.split('/')[-1].split('traininglog_')[-1].replace('_regression','').replace('TRAININGID',training_id)
+# without training ID 
+out_path = 'plots/Rec' + in_path.split('traininglog_refine')[-1].split('_regression')[0]+'0'
+print('out_path',out_path)
 # specify what losses should be plotted (need to be present in the csv output file)
 plots = [
     ['mmdfixsigma_output_target'],
     ['mmd_output_target'],
-    ['mmd_output_target_hadflav0', 'mmd_output_target_hadflav4', 'mmd_output_target_hadflav5'],
+    #['mmd_output_target_hadflav0', 'mmd_output_target_hadflav4', 'mmd_output_target_hadflav5'],
     ['mse_output_target'],
     ['mse_input_output'],
     # ['lmbda_mmdfixsigma_output_target'],
@@ -72,18 +79,27 @@ labels = {
 }
 
 linewidth = 2.
-labelsize = 20
-legendsize = 15
-ticklabelsize = 15
-markersize = 20
-plotwidth = 10
-plotheight = 5
+labelsize = 34  # For axis labels
+legendsize = 30  # For legend text
+ticklabelsize = 25  # For tick labels on both axes
+markersize = 20  # Assuming you might use markers
+plotwidth = 10  # Adjusted for bigger text
+plotheight = 8  # Adjusted for bigger text
+
+#labelsize = 20
+#legendsize = 15
+#ticklabelsize = 15
+#markersize = 20
+#plotwidth = 10
+#plotheight = 5
 
 print('\n### read csv files')
-
+print('hopefully this exists', in_path.replace('TRAININGID', training_id) + '_train.csv')
 nepochs_train, nbatches_train, values_train, benchmarks_train, starts_train = read_csv(in_path.replace('TRAININGID', training_id) + '_train.csv')
-nepochs_val, nbatches_val, values_val, benchmarks_val, starts_val = read_csv(in_path.replace('TRAININGID', training_id) + '_validation.csv')
 
+print('hopefully this exists too', in_path.replace('TRAININGID', training_id) + '_validation.csv')
+nepochs_val, nbatches_val, values_val, benchmarks_val, starts_val = read_csv(in_path.replace('TRAININGID', training_id) + '_validation.csv')
+print('done with that')
 assert nepochs_train == nepochs_val
 nepochs = nepochs_train
 epochs = np.array(range(nepochs + 1))
@@ -125,6 +141,7 @@ def styleAx(a):
     a.set_xlabel('Epoch', size=labelsize)
     a.set_xlim([0, nepochs])
     a.xaxis.get_major_locator().set_params(integer=True)
+    a.grid(which='both', linestyle='--', linewidth=0.5, color='black')
 
 
 print('\n### make plots')
@@ -134,32 +151,42 @@ fig, axes = plt.subplots(nrows=len(plots), ncols=2, figsize=(2 * plotwidth, len(
 if len(plots) == 1:
     axes = [axes]
 
+
+
 for iplot, plot in enumerate(plots):
+    fig, ax = plt.subplots(figsize=(plotwidth, plotheight))  # Create figure for each plot
 
     mdmm_constraint_plotted = False
 
     for p in plot:
 
-        if p in labels: label = labels[p]
-        else: label = p
+        if p in labels: 
+            label = labels[p]
+        else: 
+            label = p
 
-        c = axes[iplot][0].plot(epochs, data_train[p], label=label if len(plot) > 1 else '', linewidth=linewidth)
-        axes[iplot][0].plot(epochs, data_val[p], label='', linewidth=linewidth, color=c[0].get_color(), linestyle='--')
-        if len(plot) == 1: axes[iplot][0].set_ylabel(label, size=labelsize)
-
-        axes[iplot][1].plot(epochs, abs(data_train[p]), label='|' + label + '|' if len(plot) > 1 else '', linewidth=linewidth, color=c[0].get_color())
-        axes[iplot][1].plot(epochs, abs(data_val[p]), label='', linewidth=linewidth, color=c[0].get_color(), linestyle='--')
-        if len(plot) == 1: axes[iplot][1].set_ylabel('|' + label + '|', size=labelsize)
+        c = ax.plot(epochs, data_train[p], label=label if len(plot) > 1 else '', linewidth=linewidth)
+        ax.plot(epochs, data_val[p], label='', linewidth=linewidth, color=c[0].get_color(), linestyle='--')
+        if len(plot) == 1: 
+            ax.set_ylabel(label, size=labelsize)
 
         if p in mdmm_constraints:
-            for idx in [0, 1]:
-                axes[iplot][idx].axhline(mdmm_constraints[p], label='' if mdmm_constraint_plotted else 'MDMM Constraint', linewidth=linewidth, color='black', linestyle=':')
+            ax.axhline(mdmm_constraints[p], label='MDMM Constraint' if not mdmm_constraint_plotted else '', linewidth=linewidth, color='black', linestyle=':')
             mdmm_constraint_plotted = True
 
-    for idx in [0, 1]:
-        styleAx(axes[iplot][idx])
-    axes[iplot][1].set_yscale('log')
+    styleAx(ax)
+    ax.set_yscale('linear')  # Explicitly set to linear for clarity, though it's the default
 
-fig.tight_layout()
-fig.savefig(out_path)
-print('just created ' + out_path)
+    # Adjust layout and save the plot
+    plt.tight_layout()
+
+    # Construct a filename for the plot
+    plot_name = '_'.join(plot)  # Concatenates all metric names, consider simplifying
+    print('plot_name', plot_name)
+    individual_out_path = out_path+'_'+plot_name+'.png'
+    fig.savefig(individual_out_path)
+    print(f'just created {individual_out_path}')
+
+    plt.close(fig)  # Close the figure to free up memory
+
+

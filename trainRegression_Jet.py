@@ -9,17 +9,13 @@ python trainRegression.py 2>&1 | tee traininglog_regression.txt
 
 #first 
 screen
-#(making sure that the interactive job is created in the screen session and not killed when I log off), 
-#then 
 condor_submit -i interactive.submit 
-#and then when the job is spawned, I source my 
 source /afs/desy.de/user/b/beinsam/.bash_profile
 torefinement
 cmsenv
 cd /nfs/dust/cms/user/beinsam/FastSim/Refinement/Regress
 source /cvmfs/sft.cern.ch/lcg/views/LCG_101cuda/x86_64-centos7-gcc8-opt/setup.sh
-to write terminal output to a txt file:
-
+#to write terminal output to a txt file:
 python3 trainRegression_Jet.py 2>&1 | tee traininglog_regressionJet.txt
 
 """
@@ -280,7 +276,8 @@ logitfactor = 1.
 
 if is_test: num_epochs = 2
 else: 
-    num_epochs = 1000
+    #num_epochs = 1000
+    num_epochs = 100    
     #num_epochs = 2
 
 learning_rate = 1e-5
@@ -516,8 +513,8 @@ print(sum(p.numel() for p in model.parameters() if p.requires_grad), 'trainable 
 calculatelosseswithtransformedvariables = True
 includeparametersinmmd = True
 
-mmdfixsigma_fn = my_mmd.MMD(kernel_mul=10., kernel_num=5, fix_sigma=1.)
-mmd_fn = my_mmd.MMD(kernel_mul=10., kernel_num=5)
+mmdfixsigma_fn = my_mmd.MMD(kernel_mul=5., kernel_num=5,calculate_fix_sigma_for_each_dimension_with_target_only=True)# fix_sigma=true by default
+mmd_fn = my_mmd.MMD(kernel_mul=5., kernel_num=5)
 mse_fn = torch.nn.MSELoss()
 mae_fn = torch.nn.L1Loss()
 huber_fn = torch.nn.HuberLoss(delta=0.1)
@@ -552,22 +549,22 @@ loss_fns = {
     #                                                 if includeparametersinmmd else None,
     #                                                 mask=inp_[:, hadronFlavourIndex] == 5),
 
-    # 'mmdfixsigma_output_target_hadflavSum':
-    #     lambda inp_, out_, target_: hadflav_fraction_0 * mmdfixsigma_fn(out_, target_,
-    #                                                                      parameters=(OneHotEncode(source_idx=onehotencode[2], target_vals=onehotencode[1]).forward(inp_)[:, :len(PARAMETERS)]
-    #                                                                                  if onehotencode else inp_[:, :len(PARAMETERS)])
-    #                                                                      if includeparametersinmmd else None,
-    #                                                                      mask=inp_[:, hadronFlavourIndex] == 0) +
-    #                                 hadflav_fraction_4 * mmdfixsigma_fn(out_, target_,
-    #                                                                      parameters=(OneHotEncode(source_idx=onehotencode[2], target_vals=onehotencode[1]).forward(inp_)[:, :len(PARAMETERS)]
-    #                                                                                  if onehotencode else inp_[:, :len(PARAMETERS)])
-    #                                                                      if includeparametersinmmd else None,
-    #                                                                      mask=inp_[:, hadronFlavourIndex] == 4) +
-    #                                 hadflav_fraction_5 * mmdfixsigma_fn(out_, target_,
-    #                                                                      parameters=(OneHotEncode(source_idx=onehotencode[2], target_vals=onehotencode[1]).forward(inp_)[:, :len(PARAMETERS)]
-    #                                                                                  if onehotencode else inp_[:, :len(PARAMETERS)])
-    #                                                                      if includeparametersinmmd else None,
-    #                                                                      mask=inp_[:, hadronFlavourIndex] == 5),
+    'mmdfixsigma_output_target_hadflavSum':
+        lambda inp_, out_, target_: hadflav_fraction_0 * mmdfixsigma_fn(out_, target_,
+                                                                         parameters=(OneHotEncode(source_idx=onehotencode[2], target_vals=onehotencode[1]).forward(inp_)[:, :len(PARAMETERS)]
+                                                                                     if onehotencode else inp_[:, :len(PARAMETERS)])
+                                                                         if includeparametersinmmd else None,
+                                                                         mask=inp_[:, hadronFlavourIndex] == 0) +
+                                    hadflav_fraction_4 * mmdfixsigma_fn(out_, target_,
+                                                                         parameters=(OneHotEncode(source_idx=onehotencode[2], target_vals=onehotencode[1]).forward(inp_)[:, :len(PARAMETERS)]
+                                                                                     if onehotencode else inp_[:, :len(PARAMETERS)])
+                                                                         if includeparametersinmmd else None,
+                                                                         mask=inp_[:, hadronFlavourIndex] == 4) +
+                                    hadflav_fraction_5 * mmdfixsigma_fn(out_, target_,
+                                                                         parameters=(OneHotEncode(source_idx=onehotencode[2], target_vals=onehotencode[1]).forward(inp_)[:, :len(PARAMETERS)]
+                                                                                     if onehotencode else inp_[:, :len(PARAMETERS)])
+                                                                         if includeparametersinmmd else None,
+                                                                         mask=inp_[:, hadronFlavourIndex] == 5),
 
     'mmd_output_target':
         lambda inp_, out_, target_: mmd_fn(out_, target_,
@@ -660,13 +657,13 @@ nomdmm_loss_scales = {
     'mmdfixsigma_output_target_hadflav0': 0.,
     'mmdfixsigma_output_target_hadflav4': 0.,
     'mmdfixsigma_output_target_hadflav5': 0.,
-    'mmdfixsigma_output_target_hadflavSum': 0.,
+    'mmdfixsigma_output_target_hadflavSum': 1.,
 
     'mmd_output_target': 0.,
     'mmd_output_target_hadflav0': 0.,
     'mmd_output_target_hadflav4': 0.,
     'mmd_output_target_hadflav5': 0.,
-    'mmd_output_target_hadflavSum': 1.,
+    'mmd_output_target_hadflavSum': 0.,
 
     'mse_output_target': 0.,
     'mse_input_output': 0.,

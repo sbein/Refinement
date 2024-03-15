@@ -95,21 +95,21 @@ if is_test: num_epochs = 2
 else: 
     num_epochs = 100
     num_epochs = 1000
-    num_epochs = 2000
+    #num_epochs = 2000
 
     #num_epochs = 5
     #num_epochs = 0
 
-learning_rate = 2e-5#was 1e-5
+learning_rate = 1e-5#was 1e-5
 lr_scheduler_gamma = 1.
 
 if is_test: batch_size = 4096
 else: batch_size = 4096
 
-batch_size = 1024
+batch_size = 2048
 
 if is_test: num_batches = [2, 2, 2]
-else: num_batches = [250, 50, 100]
+else: num_batches = [150, 25, 75]
 
 
 '''
@@ -139,12 +139,12 @@ VARIABLES = [
     ('RecElectron_ip3d_CLASS', []),
     ('RecElectron_jetPtRelv2_CLASS', []),
     ('RecElectron_jetRelIso_CLASS', []),
-    ('RecElectron_mass_CLASS', []),
+    #('RecElectron_mass_CLASS', []),
     ('RecElectron_miniPFRelIso_all_CLASS', []),
     ('RecElectron_miniPFRelIso_chg_CLASS', []),
-    ('RecElectron_mvaHZZIso_CLASS', []),
-    ('RecElectron_mvaIso_CLASS', []),
-    ('RecElectron_mvaNoIso_CLASS', []),
+    ('RecElectron_mvaHZZIso_CLASS', ['fisher']),
+    ('RecElectron_mvaIso_CLASS', ['fisher']),
+    ('RecElectron_mvaNoIso_CLASS', ['fisher']),
     ('RecElectron_pfRelIso03_all_CLASS', []),
     ('RecElectron_pfRelIso03_chg_CLASS', []),
     ('RecElectron_phi_CLASS', []),
@@ -153,7 +153,7 @@ VARIABLES = [
     ('RecElectron_scEtOverPt_CLASS', []),
     ('RecElectron_sieie_CLASS', []),
     ('RecElectron_sip3d_CLASS', []),
-    ('RecElectron_mvaTTH_CLASS', [])
+    ('RecElectron_mvaTTH_CLASS', ['fisher'])
 ]
 
 spectators = [
@@ -347,8 +347,8 @@ print(sum(p.numel() for p in model.parameters() if p.requires_grad), 'trainable 
 calculatelosseswithtransformedvariables = True
 includeparametersinmmd = True
 
-mmdfixsigma_fn = my_mmd.MMD(kernel_mul=10., kernel_num=5, fix_sigma=1.)
-mmd_fn = my_mmd.MMD(kernel_mul=10., kernel_num=5)
+mmdfixsigma_fn = my_mmd.MMD(kernel_mul=5., kernel_num=5,calculate_fix_sigma_for_each_dimension_with_target_only=True)# fix_sigma=true by default
+mmd_fn = my_mmd.MMD(kernel_mul=3., kernel_num=5)
 mse_fn = torch.nn.MSELoss()
 mae_fn = torch.nn.L1Loss()
 huber_fn = torch.nn.HuberLoss(delta=0.1)
@@ -392,14 +392,15 @@ mdmm_constraints_config = [
     ('deepjetsum_std', 0.001),
     # ('huber_output_target', 0.00053),
 ]
+mdmm_constraints_config = []
 mdmm_constraints = []#As Moritz if this should be made an empty list
 #[my_mdmm.EqConstraint(loss_fns[c[0]], c[1]) for c in mdmm_constraints_config]
 
 # if no constraints are specified no MDMM is used and these loss scales are used
 nomdmm_loss_scales = {
 
-    'mmdfixsigma_output_target': 0.,
-    'mmd_output_target': 1.,##Ask Moritz if this would be right to have changed
+    'mmdfixsigma_output_target': 1.,
+    'mmd_output_target': 0.,##Ask Moritz if this would be right to have changed
     'mse_output_target': 0.,
     'mse_input_output': 0.,
     'mae_output_target': 0.,

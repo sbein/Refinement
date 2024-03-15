@@ -15,7 +15,7 @@ torefinement
 cmsenv
 cd /nfs/dust/cms/user/beinsam/FastSim/Refinement/Regress
 source /cvmfs/sft.cern.ch/lcg/views/LCG_101cuda/x86_64-centos7-gcc8-opt/setup.sh
-to write terminal output to a txt file:
+#to write terminal output to a txt file:
 python3 trainRegression_Muon.py 2>&1 | tee traininglog_regressionMuon.txt
 """
 
@@ -93,12 +93,12 @@ fisherfactor = 1.0# this is the 1/2 that is there in the official definition
 
 if is_test: num_epochs = 2
 else: 
-    num_epochs = 2000
+    num_epochs = 1000
     #num_epochs = 100
     #num_epochs = 5
-    num_epochs = 0
+    #num_epochs = 0
 
-learning_rate = 3e-5
+learning_rate = 1e-5
 lr_scheduler_gamma = 1.
 
 if is_test: batch_size = 4096
@@ -323,8 +323,8 @@ print(sum(p.numel() for p in model.parameters() if p.requires_grad), 'trainable 
 calculatelosseswithtransformedvariables = True
 includeparametersinmmd = True
 
-mmdfixsigma_fn = my_mmd.MMD(kernel_mul=10., kernel_num=5, fix_sigma=1.)
-mmd_fn = my_mmd.MMD(kernel_mul=10., kernel_num=5)
+mmdfixsigma_fn = my_mmd.MMD(kernel_mul=5., kernel_num=5,calculate_fix_sigma_for_each_dimension_with_target_only=True)# fix_sigma=true by default
+mmd_fn = my_mmd.MMD(kernel_mul=2., kernel_num=5)
 mse_fn = torch.nn.MSELoss()
 mae_fn = torch.nn.L1Loss()
 huber_fn = torch.nn.HuberLoss(delta=0.1)
@@ -363,19 +363,20 @@ loss_fns = {
 
 # if constraints are specified MDMM algorithm will be used
 mdmm_primary_loss = 'mmd_output_target_hadflavSum'
-mdmm_constraints_config = [
+mdmm_constraints_config = [##this can go
     ('deepjetsum_mean', 1.),
     ('deepjetsum_std', 0.001),
     # ('huber_output_target', 0.00053),
 ]
+mdmm_constraints_config = []##better for the output CSV files
 mdmm_constraints = []#As Moritz if this should be made an empty list
 #[my_mdmm.EqConstraint(loss_fns[c[0]], c[1]) for c in mdmm_constraints_config]
 
 # if no constraints are specified no MDMM is used and these loss scales are used
 nomdmm_loss_scales = {
 
-    'mmdfixsigma_output_target': 0.,
-    'mmd_output_target': 1.,##Ask Moritz if this would be right to have changed
+    'mmdfixsigma_output_target': 1.,
+    'mmd_output_target': 0,##Ask Moritz if this would be right to have changed
     'mse_output_target': 0.,
     'mse_input_output': 0.,
     'mae_output_target': 0.,
