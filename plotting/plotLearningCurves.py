@@ -41,7 +41,8 @@ def read_csv(filepath):
 in_path = '/nfs/dust/cms/user/beinsam/FastSim/Refinement/Regress/TrainingOutput/traininglog_refineMuon_regression_TRAININGID'
 #in_path = '/nfs/dust/cms/user/beinsam/FastSim/Refinement/Regress/TrainingOutput//traininglog_refineElectron_regression_TRAININGID'
 #training_id = '202403092142'
-training_id = '202403132326'
+training_id = '202403201615'
+
 
 # with training ID:
 #out_path = 'LCs_' + in_path.split('/')[-1].split('traininglog_')[-1].replace('_regression','').replace('TRAININGID',training_id)
@@ -157,7 +158,11 @@ for iplot, plot in enumerate(plots):
     fig, ax = plt.subplots(figsize=(plotwidth, plotheight))  # Create figure for each plot
 
     mdmm_constraint_plotted = False
-
+    
+    max_final_epoch_train_value = 0
+    
+    min_y_axis_value = 9999
+    max_y_axis_value = 0
     for p in plot:
 
         if p in labels: 
@@ -173,9 +178,16 @@ for iplot, plot in enumerate(plots):
         if p in mdmm_constraints:
             ax.axhline(mdmm_constraints[p], label='MDMM Constraint' if not mdmm_constraint_plotted else '', linewidth=linewidth, color='black', linestyle=':')
             mdmm_constraint_plotted = True
+        print('we should be here', plot, min_y_axis_value)
+        
+        min_y_axis_value = min(min_y_axis_value, data_train[p][-3] * 0.97)
+        max_y_axis_value = max(min_y_axis_value, data_train[p][-3] * 1.03)        
+        print('and after', plot, data_train[p], min_y_axis_value)
 
     styleAx(ax)
     ax.set_yscale('linear')  # Explicitly set to linear for clarity, though it's the default
+    ax.set_ylim(bottom=min_y_axis_value)
+    ax.set_ylim(top=max_y_axis_value)
 
     # Adjust layout and save the plot
     plt.tight_layout()

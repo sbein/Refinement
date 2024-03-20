@@ -190,12 +190,11 @@ class FisherTransform(nn.Module):
     This transformation is applied selectively based on a provided mask.
     """
 
-    def __init__(self, mask, eps=1e-6, tiny=1e-6, factor=0.5, onnxcompatible=False):
+    def __init__(self, mask, eps=1e-6, factor=0.5, onnxcompatible=False):
         super(FisherTransform, self).__init__()
 
         self._mask = mask
         self.register_buffer('_eps', torch.tensor(eps))
-        self.register_buffer('_tiny', torch.tensor(tiny))
         self.register_buffer('_factor', torch.tensor(factor))
         self._onnxcompatible = onnxcompatible
 

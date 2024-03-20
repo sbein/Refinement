@@ -56,7 +56,7 @@ verbosity = 10
 in_path = '/nfs/dust/cms/user/beinsam/FastSim/Refinement/output/mc_fullfast_T1tttt_JetsMuonsElectronsPhotonsTausEvents.root'
 in_tree = 'tMuon'
 preselection = ''#'GenMuon_nearest_dR>0.5&&RecMuon_nearest_dR_FastSim>0.5&&RecMuon_nearest_dR_FullSim>0.5'
-preselection = "RecMuon_mvaMuID_FastSim > -1 && RecMuon_mvaMuID_FullSim > -1 && RecMuon_softMva_FastSim > -1 && RecMuon_softMva_FullSim > -1"
+preselection = "RecMuon_mvaMuID_FastSim > -10 && RecMuon_mvaMuID_FullSim > -10 && RecMuon_softMva_FastSim > -10 && RecMuon_softMva_FullSim > -10"
 out_path = '/nfs/dust/cms/user/beinsam/FastSim/Refinement/Regress/TrainingOutput/output_refineMuon_regression_' + training_id + '.root'
 
 
@@ -94,7 +94,7 @@ fisherfactor = 1.0# this is the 1/2 that is there in the official definition
 if is_test: num_epochs = 2
 else: 
     num_epochs = 1000
-    #num_epochs = 100
+    #num_epochs = 200
     #num_epochs = 5
     #num_epochs = 0
 
@@ -126,10 +126,10 @@ PARAMETERS = [
 
 # if using DeepJetConstraint the DeepJet transformations have to be explicitly adapted in the DeepJetConstraint module
 VARIABLES = [
-    ('RecMuon_mvaMuID_CLASS', ['logit']),
-    ('RecMuon_softMva_CLASS', ['logit']),
-    ('RecMuon_mvaLowPt_CLASS', ['fisher']),
-    ('RecMuon_mvaTTH_CLASS', ['fisher'])
+    ('RecMuon_mvaMuID_CLASS', ['logit']),#'logit'
+    ('RecMuon_softMva_CLASS', ['logit']),#'logit'
+    ('RecMuon_mvaLowPt_CLASS',['fisher']),#'fisher'
+    ('RecMuon_mvaTTH_CLASS',  ['fisher']) #'fisher'
 ]
 
 spectators = [
@@ -217,6 +217,9 @@ deepjetindicesWithoutParameters = [idx for idx, name in enumerate(VARIABLES) if 
 logitmaskWithParameters = [int('logit' in name[1]) for name in PARAMETERS + VARIABLES]
 logitmaskWithoutParameters = [int('logit' in name[1]) for name in VARIABLES]
 
+log10maskWithParameters = [int('log10' in name[1]) for name in PARAMETERS + VARIABLES]
+log10maskWithoutParameters = [int('log10' in name[1]) for name in VARIABLES]
+
 fishermaskWithParameters = [int('fisher' in name[1]) for name in PARAMETERS + VARIABLES]
 fishermaskWithoutParameters = [int('fisher' in name[1]) for name in VARIABLES]
 
@@ -261,7 +264,8 @@ model = nn.Sequential()
 
 if any(tanh200maskWithParameters): model.add_module('Tanh200Transform', TanhTransform(mask=tanh200maskWithParameters, norm=200))
 if any(logitmaskWithParameters): model.add_module('LogitTransform', LogitTransform(mask=logitmaskWithParameters, factor=logitfactor, onnxcompatible=onnxcompatible, eps=epsilon, tiny=tiny))
-if any(fishermaskWithParameters): model.add_module('FisherTransform', FisherTransform(mask=fishermaskWithParameters, factor=fisherfactor, onnxcompatible=onnxcompatible, eps=epsilon, tiny=tiny))
+if any(log10maskWithParameters): model.add_module('log10Transform', logTransform(mask=log10maskWithParameters, base=10, onnxcompatible=onnxcompatible))
+if any(fishermaskWithParameters): model.add_module('FisherTransform', FisherTransform(mask=fishermaskWithParameters, factor=fisherfactor, onnxcompatible=onnxcompatible, eps=epsilon))
 
 if onehotencode: model.add_module('OneHotEncode_' + onehotencode[0], OneHotEncode(source_idx=onehotencode[2], target_vals=onehotencode[1]))
 
@@ -323,7 +327,7 @@ print(sum(p.numel() for p in model.parameters() if p.requires_grad), 'trainable 
 calculatelosseswithtransformedvariables = True
 includeparametersinmmd = True
 
-mmdfixsigma_fn = my_mmd.MMD(kernel_mul=5., kernel_num=5,calculate_fix_sigma_for_each_dimension_with_target_only=True)# fix_sigma=true by default
+mmdfixsigma_fn = my_mmd.MMD(kernel_mul=5., kernel_num=5,one_sided_bandwidth=True,calculate_fix_sigma_for_each_dimension_with_target_only=True)# fix_sigma=true by default
 mmd_fn = my_mmd.MMD(kernel_mul=2., kernel_num=5)
 mse_fn = torch.nn.MSELoss()
 mae_fn = torch.nn.L1Loss()
@@ -447,18 +451,21 @@ for epoch in range(num_epochs):
                     if any(tanh200maskWithoutParameters):
                         target = TanhTransform(mask=tanh200maskWithoutParameters, norm=200).forward(target)
                         out = TanhTransform(mask=tanh200maskWithoutParameters, norm=200).forward(out)
-
                     if any(logitmaskWithParameters):
                         inp = LogitTransform(mask=logitmaskWithParameters, factor=logitfactor, onnxcompatible=False, eps=epsilon, tiny=tiny).forward(inp)
                     if any(logitmaskWithoutParameters):
                         target = LogitTransform(mask=logitmaskWithoutParameters, factor=logitfactor, onnxcompatible=False, eps=epsilon, tiny=tiny).forward(target)
                         out = LogitTransform(mask=logitmaskWithoutParameters, factor=logitfactor, onnxcompatible=False, eps=epsilon, tiny=tiny).forward(out)
-                        
+                    if any(log10maskWithParameters):
+                        inp = log10Transform(mask=log10maskWithParameters, factor=log10factor, onnxcompatible=False, eps=epsilon, tiny=tiny).forward(inp)
+                    if any(log10maskWithoutParameters):
+                        target = log10Transform(mask=log10maskWithoutParameters, factor=log10factor, onnxcompatible=False, eps=epsilon, tiny=tiny).forward(target)
+                        out = log10Transform(mask=log10maskWithoutParameters, factor=log10factor, onnxcompatible=False, eps=epsilon, tiny=tiny).forward(out)                        
                     if any(fishermaskWithParameters):
-                        inp = FisherTransform(mask=fishermaskWithParameters, factor=fisherfactor, onnxcompatible=False, eps=epsilon, tiny=tiny).forward(inp)
+                        inp = FisherTransform(mask=fishermaskWithParameters, factor=fisherfactor, onnxcompatible=False, eps=epsilon).forward(inp)
                     if any(fishermaskWithoutParameters):
-                        target = FisherTransform(mask=fishermaskWithoutParameters, factor=fisherfactor, onnxcompatible=False, eps=epsilon, tiny=tiny).forward(target)
-                        out = FisherTransform(mask=fishermaskWithoutParameters, factor=fisherfactor, onnxcompatible=False, eps=epsilon, tiny=tiny).forward(out)                        
+                        target = FisherTransform(mask=fishermaskWithoutParameters, factor=fisherfactor, onnxcompatible=False, eps=epsilon).forward(target)
+                        out = FisherTransform(mask=fishermaskWithoutParameters, factor=fisherfactor, onnxcompatible=False, eps=epsilon).forward(out)                        
 
                 for loss in loss_fns:
                     benchmarks[loss] += loss_fns[loss](inp, inp[:, real_len_parameters:], target).item()
@@ -507,18 +514,21 @@ for epoch in range(num_epochs):
             if any(tanh200maskWithoutParameters):
                 target = TanhTransform(mask=tanh200maskWithoutParameters, norm=200).forward(target)
                 out = TanhTransform(mask=tanh200maskWithoutParameters, norm=200).forward(out)
-
             if any(logitmaskWithParameters):
                 inp = LogitTransform(mask=logitmaskWithParameters, factor=logitfactor, onnxcompatible=False, eps=epsilon, tiny=tiny).forward(inp)
             if any(logitmaskWithoutParameters):
                 target = LogitTransform(mask=logitmaskWithoutParameters, factor=logitfactor, onnxcompatible=False, eps=epsilon, tiny=tiny).forward(target)
                 out = LogitTransform(mask=logitmaskWithoutParameters, factor=logitfactor, onnxcompatible=False, eps=epsilon, tiny=tiny).forward(out)
-                
+            if any(log10maskWithParameters):
+                inp = log10Transform(mask=log10maskWithParameters, factor=log10factor, onnxcompatible=False, eps=epsilon, tiny=tiny).forward(inp)
+            if any(log10maskWithoutParameters):
+                target = log10Transform(mask=log10maskWithoutParameters, factor=log10factor, onnxcompatible=False, eps=epsilon, tiny=tiny).forward(target)
+                out = log10Transform(mask=log10maskWithoutParameters, factor=log10factor, onnxcompatible=False, eps=epsilon, tiny=tiny).forward(out)                
             if any(fishermaskWithParameters):
-                inp = FisherTransform(mask=fishermaskWithParameters, factor=fisherfactor, onnxcompatible=False, eps=epsilon, tiny=tiny).forward(inp)
+                inp = FisherTransform(mask=fishermaskWithParameters, factor=fisherfactor, onnxcompatible=False, eps=epsilon).forward(inp)
             if any(fishermaskWithoutParameters):
-                target = FisherTransform(mask=fishermaskWithoutParameters, factor=fisherfactor, onnxcompatible=False, eps=epsilon, tiny=tiny).forward(target)
-                out = FisherTransform(mask=fishermaskWithoutParameters, factor=fisherfactor, onnxcompatible=False, eps=epsilon, tiny=tiny).forward(out)                
+                target = FisherTransform(mask=fishermaskWithoutParameters, factor=fisherfactor, onnxcompatible=False, eps=epsilon).forward(target)
+                out = FisherTransform(mask=fishermaskWithoutParameters, factor=fisherfactor, onnxcompatible=False, eps=epsilon).forward(out)                
 
         for loss in loss_fns:
             loss_vals[loss] = loss_fns[loss](inp, out, target)
@@ -580,12 +590,16 @@ for epoch in range(num_epochs):
                 if any(logitmaskWithoutParameters):
                     target = LogitTransform(mask=logitmaskWithoutParameters, factor=logitfactor, onnxcompatible=False, eps=epsilon, tiny=tiny).forward(target)
                     out = LogitTransform(mask=logitmaskWithoutParameters, factor=logitfactor, onnxcompatible=False, eps=epsilon, tiny=tiny).forward(out)
-                    
+                if any(log10maskWithParameters):
+                    inp = log10Transform(mask=log10maskWithParameters, factor=log10factor, onnxcompatible=False, eps=epsilon, tiny=tiny).forward(inp)
+                if any(log10maskWithoutParameters):
+                    target = log10Transform(mask=log10maskWithoutParameters, factor=log10factor, onnxcompatible=False, eps=epsilon, tiny=tiny).forward(target)
+                    out = log10Transform(mask=log10maskWithoutParameters, factor=log10factor, onnxcompatible=False, eps=epsilon, tiny=tiny).forward(out)                    
                 if any(fishermaskWithParameters):
-                    inp = FisherTransform(mask=fishermaskWithParameters, factor=fisherfactor, onnxcompatible=False, eps=epsilon, tiny=tiny).forward(inp)
+                    inp = FisherTransform(mask=fishermaskWithParameters, factor=fisherfactor, onnxcompatible=False, eps=epsilon).forward(inp)
                 if any(fishermaskWithoutParameters):
-                    target = FisherTransform(mask=fishermaskWithoutParameters, factor=fisherfactor, onnxcompatible=False, eps=epsilon, tiny=tiny).forward(target)
-                    out = FisherTransform(mask=fishermaskWithoutParameters, factor=fisherfactor, onnxcompatible=False, eps=epsilon, tiny=tiny).forward(out)                    
+                    target = FisherTransform(mask=fishermaskWithoutParameters, factor=fisherfactor, onnxcompatible=False, eps=epsilon).forward(target)
+                    out = FisherTransform(mask=fishermaskWithoutParameters, factor=fisherfactor, onnxcompatible=False, eps=epsilon).forward(out)                    
 
             for loss in loss_fns:
                 loss_vals[loss] = loss_fns[loss](inp, out, target)

@@ -1,6 +1,6 @@
 import torch
 from torch import nn
-
+import math
 
 class MMD(nn.Module):
     """Implementation of the empirical estimate of the maximum mean discrepancy
@@ -45,8 +45,29 @@ class MMD(nn.Module):
 
         if bandwidth_by_dimension:
             L2_distance = ((total0-total1)**2)
+            L1 = total0-total1
         else:
             L2_distance = ((total0-total1)**2).sum(2)
+            
+        if torch.isnan(L2_distance).any():
+            print("Situation with L2_distance")
+            # Optional: print some values to inspect
+            print("Sample differences:", (total0-total1))
+
+            print('This gave a NaN', torch.isnan(L2_distance).any(),torch.isnan(total0).any(),torch.isnan(total1).any(),torch.isnan(L1).any())
+            diff = total0 - total1
+            nan_indices = torch.isnan(diff).nonzero()
+            print("Indices of NaN values in difference:", nan_indices)
+            for idx in nan_indices:
+                # Unpack the indices
+                i, j, k = idx.tolist()
+                
+                # Print the problematic values
+                print(f"Inspecting NaN at index [{i}, {j}, {k}]:")
+                print(f"Value in total0: {total0[i, j, k].item()}")
+                print(f"Value in total1: {total1[i, j, k].item()}")
+                print("-" * 40)              
+            exit(0)
 
         if l2dist_out is not None:
             globals()[l2dist_out] = (torch.sum(((total0-total1)**2).sum(2).data) / (n_samples**2-n_samples)).item()
@@ -60,7 +81,10 @@ class MMD(nn.Module):
         else:
             bandwidth /= kernel_mul ** (kernel_num // 2)
         bandwidth_list = [bandwidth * (kernel_mul**i) for i in range(kernel_num)]
-
+        
+        if torch.isnan(bandwidth).any():
+            print("NaN detected in bandwidth calculation")
+    
         if bandwidth_by_dimension:
             kernel_val = [torch.exp(-(L2_distance / bandwidth_temp).sum(2)) for bandwidth_temp in bandwidth_list]
         else:
@@ -75,6 +99,10 @@ class MMD(nn.Module):
         # print('mmd values')
         # print([torch.mean(k[:int(source.size()[0]), :int(source.size()[0])] + k[int(source.size()[0]):, int(source.size()[0]):] - k[:int(source.size()[0]), int(source.size()[0]):] - k[int(source.size()[0]):, :int(source.size()[0])]) for k in kernel_val])
 
+        for i, kv in enumerate(kernel_val):
+            if torch.isnan(kv).any():
+                print(f"NaN detected in kernel_val at index {i}")
+                
         return sum(kernel_val)
 
     def forward(self, source, target, parameters=None, mask=None, l2dist_out=None):
@@ -117,10 +145,18 @@ class MMD(nn.Module):
 
                 if mask is not None:
                     total = total[mask]
-
+                    
                 total0 = total.unsqueeze(0).expand(int(total.size()[0]), int(total.size()[0]), int(total.size()[1]))
                 total1 = total.unsqueeze(1).expand(int(total.size()[0]), int(total.size()[0]), int(total.size()[1]))
+                if torch.isnan(total0).any() or torch.isnan(total1).any():
+                    print("NaN detected in total0 or total1 before computing L2_distance")                
                 L2_distance = ((total0-total1)**2).sum((0, 1))
+                if torch.isnan(L2_distance).any():
+                    print("NaN detected in L2_distance B")
+                    # Optional: print some values to inspect
+                    print("Sample values in total0:", total0[0][0][:10])
+                    print("Sample values in total1:", total1[0][0][:10])
+                    print("Sample differences:", (total0-total1)[0][0][:10])
 
                 self.fix_sigma_target_only_by_dimension = L2_distance.data / (n_samples**2-n_samples)
 
@@ -141,12 +177,28 @@ class MMD(nn.Module):
             total0 = total.unsqueeze(0).expand(int(total.size()[0]), int(total.size()[0]), int(total.size()[1]))
             total1 = total.unsqueeze(1).expand(int(total.size()[0]), int(total.size()[0]), int(total.size()[1]))
             L2_distance = ((total0-total1)**2).sum(2)
+            if torch.isnan(L2_distance).any():
+                print("NaN detected in L2_distance C")
+                # Optional: print some values to inspect
+                print("Sample values in total0:", total0[0][0][:10])
+                print("Sample values in total1:", total1[0][0][:10])
+                print("Sample differences:", (total0-total1)[0][0][:10])            
 
             sigma = torch.sum(L2_distance.data) / (n_samples**2-n_samples)
 
         else:
 
             sigma = self.fix_sigma
+            
+            
+        if sigma is not None:
+            if torch.is_tensor(sigma):
+                if torch.isnan(sigma).any():
+                    print("NaN detected in sigma tensor inside forward")
+            else:
+                if math.isnan(sigma):  # For non-tensor, retain the original check
+                    print("NaN detected in sigma (non-tensor) inside forward")
+                
 
         if parameters is not None:
             source = torch.cat((source, parameters), dim=1)
@@ -157,9 +209,17 @@ class MMD(nn.Module):
             target = target[mask]
 
         batch_size = int(source.size()[0])
+        if torch.isnan(source).any():
+            print("NaN detected in source before gaussian_kernel")
+        if torch.isnan(target).any():
+            print("NaN detected in target before gaussian_kernel")
+            
         kernels = MMD.gaussian_kernel(source, target, kernel_mul=self.kernel_mul, kernel_num=self.kernel_num, fix_sigma=sigma,
                                       one_sided_bandwidth=self.one_sided_bandwidth, bandwidth_by_dimension=self.calculate_fix_sigma_for_each_dimension_with_target_only,
                                       l2dist_out=l2dist_out)
+    
+        if torch.isnan(kernels).any():
+            print("NaN detected in kernels output from gaussian_kernel")
 
         XX = kernels[:batch_size, :batch_size]
         YY = kernels[batch_size:, batch_size:]

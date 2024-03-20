@@ -266,6 +266,7 @@ adddeepjetconstraintlayer = False
 tiny = 1e-8
 epsilon = torch.finfo(torch.float16).eps / 2.  # = 1 / 2048 = 1 - 0.99951172 (1 - largest number < 1 in 16-bit)
 logitfactor = 1.
+fisherfactor = 1.0# this is the 1/2 that is there in the official definition
 
 
 '''
@@ -412,6 +413,13 @@ deepjetindicesWithoutParameters = [idx for idx, name in enumerate(VARIABLES) if 
 logitmaskWithParameters = [int('logit' in name[1]) for name in PARAMETERS + VARIABLES]
 logitmaskWithoutParameters = [int('logit' in name[1]) for name in VARIABLES]
 
+log10maskWithParameters = [int('log10' in name[1]) for name in PARAMETERS + VARIABLES]
+log10maskWithoutParameters = [int('log10' in name[1]) for name in VARIABLES]
+
+fishermaskWithParameters = [int('fisher' in name[1]) for name in PARAMETERS + VARIABLES]
+fishermaskWithoutParameters = [int('fisher' in name[1]) for name in VARIABLES]
+
+
 tanh200maskWithParameters = [int('tanh200' in name[1]) for name in PARAMETERS + VARIABLES]
 tanh200maskWithoutParameters = [int('tanh200' in name[1]) for name in VARIABLES]
 
@@ -449,10 +457,10 @@ print('\n### build model')
 
 nodes_hidden_layer_list = [nodes_hidden_layer for _ in range(num_skipblocks)]
 
-model = nn.Sequential()
-
 if any(tanh200maskWithParameters): model.add_module('Tanh200Transform', TanhTransform(mask=tanh200maskWithParameters, norm=200))
 if any(logitmaskWithParameters): model.add_module('LogitTransform', LogitTransform(mask=logitmaskWithParameters, factor=logitfactor, onnxcompatible=onnxcompatible, eps=epsilon, tiny=tiny))
+if any(log10maskWithParameters): model.add_module('log10Transform', logTransform(mask=log10maskWithParameters, base=10, onnxcompatible=onnxcompatible))
+if any(fishermaskWithParameters): model.add_module('FisherTransform', FisherTransform(mask=fishermaskWithParameters, factor=fisherfactor, onnxcompatible=onnxcompatible, eps=epsilon))
 
 if onehotencode: model.add_module('OneHotEncode_' + onehotencode[0], OneHotEncode(source_idx=onehotencode[2], target_vals=onehotencode[1]))
 
