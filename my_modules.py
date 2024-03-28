@@ -26,9 +26,9 @@ class LogTransform(nn.Module):
 
         self._mask = mask
         if base is None:
-            self._base = None
+            self.register_buffer('_base', torch.tensor(0.))
         else:
-            self._base = torch.tensor(base)
+            self.register_buffer('_base', torch.tensor(base))
         self.register_buffer('_eps', torch.tensor(eps))
 
     def forward(self, x):
@@ -39,7 +39,7 @@ class LogTransform(nn.Module):
             if self._mask[idim]:
                 dim = torch.clamp(dim, min=self._eps)
                 x_[idim] = torch.log(dim)
-                if self._base is not None: x_[idim] /= torch.log(self._base)
+                if self._base > 0.: x_[idim] /= torch.log(self._base)
             else:
                 x_[idim] = dim
 
@@ -55,9 +55,9 @@ class LogTransformBack(nn.Module):
         super(LogTransformBack, self).__init__()
         self._mask = mask
         if base is None:
-            self._base = None
+            self.register_buffer('_base', torch.tensor(0.))
         else:
-            self._base = torch.tensor(base)
+            self.register_buffer('_base', torch.tensor(base))
 
     def forward(self, x):
 
@@ -65,10 +65,10 @@ class LogTransformBack(nn.Module):
         x_ = torch.empty_like(xt)
         for idim, dim in enumerate(xt):
             if self._mask[idim]:
-                if self._base is None:
-                    x_[idim] = torch.exp(dim)
-                else:
+                if self._base > 0.:
                     x_[idim] = torch.pow(self._base, dim)
+                else:
+                    x_[idim] = torch.exp(dim)
             else:
                 x_[idim] = dim
 
