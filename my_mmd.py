@@ -55,6 +55,7 @@ class MMD(nn.Module):
             bandwidth = torch.sum(L2_distance.data) / (n_samples**2-n_samples)
         else:
             bandwidth = fix_sigma.detach().clone() if torch.is_tensor(fix_sigma) else torch.tensor(fix_sigma)
+
         if one_sided_bandwidth:
             bandwidth /= kernel_mul ** (kernel_num - 1)
         else:
@@ -108,8 +109,6 @@ class MMD(nn.Module):
 
             if self.fix_sigma_target_only_by_dimension is None:
 
-                n_samples = int(target.size()[0])
-
                 if parameters is not None:
                     total = torch.cat((target, parameters), dim=1)
                 else:
@@ -120,12 +119,15 @@ class MMD(nn.Module):
 
                 total0 = total.unsqueeze(0).expand(int(total.size()[0]), int(total.size()[0]), int(total.size()[1]))
                 total1 = total.unsqueeze(1).expand(int(total.size()[0]), int(total.size()[0]), int(total.size()[1]))
-                L2_distance = ((total0-total1)**2).sum((0, 1))
 
-                self.fix_sigma_target_only_by_dimension = L2_distance.data / (n_samples**2-n_samples)
+                # self.fix_sigma_target_only_by_dimension = torch.tensor([((total0-total1)**2)[:, :, i].mean() for i in range(total.size()[1])], device=total.device)
+                self.fix_sigma_target_only_by_dimension = torch.tensor([((total0-total1)**2)[:, :, i].median() for i in range(total.size()[1])], device=total.device)
 
                 print('\ncalculated BWs by dimension to be:')
                 print(self.fix_sigma_target_only_by_dimension)
+
+                for ibw, bw in enumerate(self.fix_sigma_target_only_by_dimension):
+                    if bw == 0: raise Exception('bandwidth is 0 for variable number' + str(ibw))
 
             sigma = self.fix_sigma_target_only_by_dimension
 
