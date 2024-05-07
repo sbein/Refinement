@@ -14,7 +14,7 @@ class MMD(nn.Module):
     "bandwidth" can be fixed or is calculated from the L2-distance
 
     """
-    def __init__(self, kernel_mul=2.0, kernel_num=5, fix_sigma=None, one_sided_bandwidth=False,
+    def __init__(self, kernel_mul=2.0, kernel_num=5, fix_sigma=None, one_sided_bandwidth=False, exclude_diagonals=False,
                  calculate_sigma_without_parameters=False, calculate_fix_sigma_with_target_only=False, calculate_fix_sigma_for_each_dimension_with_target_only=False):
 
         super(MMD, self).__init__()
@@ -23,6 +23,7 @@ class MMD(nn.Module):
         self.kernel_num = kernel_num
         self.fix_sigma = fix_sigma
         self.one_sided_bandwidth = one_sided_bandwidth
+        self.exclude_diagonals = exclude_diagonals
 
         self.calculate_sigma_without_parameters = calculate_sigma_without_parameters  # fix_sigma will be overwritten
 
@@ -167,11 +168,26 @@ class MMD(nn.Module):
         YY = kernels[batch_size:, batch_size:]
         XY = kernels[:batch_size, batch_size:]
         YX = kernels[batch_size:, :batch_size]
-        if batch_size == 0:
-            # if nothing survives the mask
+
+        if batch_size == 0:  # if nothing survives the mask
+
             loss = torch.tensor(0.)
+
         else:
-            loss = torch.mean(XX + YY - XY - YX)
+
+            if self.exclude_diagonals:
+
+                XX = XX * (1 - torch.eye(batch_size, device=XX.device))
+                YY = YY * (1 - torch.eye(batch_size, device=YY.device))
+
+                loss = XX.sum() / (batch_size * batch_size - batch_size) \
+                    + YY.sum() / (batch_size * batch_size - batch_size) \
+                    - XY.sum() / (batch_size * batch_size) \
+                    - YX.sum() / (batch_size * batch_size)
+
+            else:
+
+                loss = torch.mean(XX + YY - XY - YX)
 
         return loss
 
