@@ -70,8 +70,8 @@ class EqConstraint(Constraint):
 class MaxConstraint(Constraint):
     """Represents a maximum inequality constraint which uses a slack variable."""
 
-    def __init__(self, fn, max, scale=1., damping=1.):
-        super().__init__(fn, scale, damping)
+    def __init__(self, fn, max, scale=1., damping=1., lmbda_init=0.):
+        super().__init__(fn, scale, damping, lmbda_init)
         self.register_buffer('max', torch.as_tensor(max))
         self.slack = nn.Parameter(torch.as_tensor(float('nan')))
 
@@ -88,8 +88,8 @@ class MaxConstraint(Constraint):
 class MaxConstraintHard(Constraint):
     """Represents a maximum inequality constraint without a slack variable."""
 
-    def __init__(self, fn, max, scale=1., damping=1.):
-        super().__init__(fn, scale, damping)
+    def __init__(self, fn, max, scale=1., damping=1., lmbda_init=0.):
+        super().__init__(fn, scale, damping, lmbda_init)
         self.register_buffer('max', torch.as_tensor(max))
 
     def extra_repr(self):
@@ -102,8 +102,8 @@ class MaxConstraintHard(Constraint):
 class MinConstraint(Constraint):
     """Represents a minimum inequality constraint which uses a slack variable."""
 
-    def __init__(self, fn, min, scale=1., damping=1.):
-        super().__init__(fn, scale, damping)
+    def __init__(self, fn, min, scale=1., damping=1., lmbda_init=0.):
+        super().__init__(fn, scale, damping, lmbda_init)
         self.register_buffer('min', torch.as_tensor(min))
         self.slack = nn.Parameter(torch.as_tensor(float('nan')))
 
@@ -120,8 +120,8 @@ class MinConstraint(Constraint):
 class MinConstraintHard(Constraint):
     """Represents a minimum inequality constraint without a slack variable."""
 
-    def __init__(self, fn, min, scale=1., damping=1.):
-        super().__init__(fn, scale, damping)
+    def __init__(self, fn, min, scale=1., damping=1., lmbda_init=0.):
+        super().__init__(fn, scale, damping, lmbda_init)
         self.register_buffer('min', torch.as_tensor(min))
 
     def extra_repr(self):
@@ -134,8 +134,8 @@ class MinConstraintHard(Constraint):
 class BoundConstraintHard(Constraint):
     """Represents a bound constraint."""
 
-    def __init__(self, fn, min, max, scale=1., damping=1.):
-        super().__init__(fn, scale, damping)
+    def __init__(self, fn, min, max, scale=1., damping=1., lmbda_init=0.):
+        super().__init__(fn, scale, damping, lmbda_init)
         self.register_buffer('min', torch.as_tensor(min))
         self.register_buffer('max', torch.as_tensor(max))
 
@@ -158,19 +158,19 @@ class MDMMReturn:
 class MDMM(nn.ModuleList):
     """The main MDMM class, which combines multiple constraints."""
 
-    def make_optimizer(self, params, *, optimizer=optim.Adamax, lr=2e-3):
+    def make_optimizer(self, params, *, optimizer=optim.Adamax, lr=2e-3, lr_lambda_factor=1.):
         lambdas = [c.lmbda for c in self]
         slacks = [c.slack for c in self if hasattr(c, 'slack')]
         return optimizer([{'params': params, 'lr': lr},
-                          {'params': lambdas, 'lr': -lr},
+                          {'params': lambdas, 'lr': -lr_lambda_factor*lr},
                           {'params': slacks, 'lr': lr}])
 
-    def forward(self, loss, inp, out, target):
+    def forward(self, loss, inp, out, target, switch_off_constraints=False):
         value = loss.clone()
         fn_values, infs = [], []
         for c in self:
             c_return = c(inp, out, target)
-            value += c_return.value
+            if not switch_off_constraints: value += c_return.value
             fn_values.append(c_return.fn_value)
             infs.append(c_return.inf)
         return MDMMReturn(value, fn_values, infs)
