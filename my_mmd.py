@@ -120,15 +120,23 @@ class MMD(nn.Module):
 
                 total0 = total.unsqueeze(0).expand(int(total.size()[0]), int(total.size()[0]), int(total.size()[1]))
                 total1 = total.unsqueeze(1).expand(int(total.size()[0]), int(total.size()[0]), int(total.size()[1]))
+                L2_distances = (total0-total1)**2
 
-                # self.fix_sigma_target_only_by_dimension = torch.tensor([((total0-total1)**2)[:, :, i].mean() for i in range(total.size()[1])], device=total.device)
-                self.fix_sigma_target_only_by_dimension = torch.tensor([((total0-total1)**2)[:, :, i].median() for i in range(total.size()[1])], device=total.device)
+                if type(self.calculate_fix_sigma_for_each_dimension_with_target_only) == str:
+                    if self.calculate_fix_sigma_for_each_dimension_with_target_only == 'median':
+                        self.fix_sigma_target_only_by_dimension = torch.tensor([L2_distances[:, :, i].median() for i in range(total.size()[1])], device=total.device)
+                    elif self.calculate_fix_sigma_for_each_dimension_with_target_only == 'mean':
+                        self.fix_sigma_target_only_by_dimension = torch.tensor([L2_distances[:, :, i].mean() for i in range(total.size()[1])], device=total.device)
+                    else:
+                        raise NotImplementedError('cannot understand how to calculate MMD bandwidths: ' + self.fix_sigma_target_only_by_dimension)
+                else:
+                    self.fix_sigma_target_only_by_dimension = torch.tensor([L2_distances[:, :, i].median() for i in range(total.size()[1])], device=total.device)
 
                 print('\ncalculated BWs by dimension to be:')
                 print(self.fix_sigma_target_only_by_dimension)
 
                 for ibw, bw in enumerate(self.fix_sigma_target_only_by_dimension):
-                    if bw == 0: raise Exception('bandwidth is 0 for variable number' + str(ibw))
+                    if bw <= 0: raise Exception('bandwidth is <= 0 for variable number' + str(ibw))
 
             sigma = self.fix_sigma_target_only_by_dimension
 
