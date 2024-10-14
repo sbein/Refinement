@@ -1,3 +1,5 @@
+import sys
+
 import torch
 from torch import nn
 
@@ -14,8 +16,8 @@ class MMD(nn.Module):
     "bandwidth" can be fixed or is calculated from the L2-distance
 
     """
-    def __init__(self, kernel_mul=2.0, kernel_num=5, fix_sigma=None, one_sided_bandwidth=False, exclude_diagonals=False,
-                 calculate_sigma_without_parameters=False, calculate_fix_sigma_with_target_only=False, calculate_fix_sigma_for_each_dimension_with_target_only=False):
+    def __init__(self, kernel_mul=2.0, kernel_num=5, fix_sigma=None, one_sided_bandwidth=False, exclude_diagonals=False, weighted=False,
+                 calculate_fix_sigma_with_target_only=False, calculate_fix_sigma_for_each_dimension_with_target_only=False):
 
         super(MMD, self).__init__()
 
@@ -24,8 +26,7 @@ class MMD(nn.Module):
         self.fix_sigma = fix_sigma
         self.one_sided_bandwidth = one_sided_bandwidth
         self.exclude_diagonals = exclude_diagonals
-
-        self.calculate_sigma_without_parameters = calculate_sigma_without_parameters  # fix_sigma will be overwritten
+        self.weighted = weighted
 
         self.calculate_fix_sigma_with_target_only = calculate_fix_sigma_with_target_only  # fix_sigma will be overwritten
         self.fix_sigma_target_only = None
@@ -36,7 +37,7 @@ class MMD(nn.Module):
         return
 
     @staticmethod
-    def gaussian_kernel(source, target, kernel_mul=2.0, kernel_num=5, fix_sigma=None, one_sided_bandwidth=False, bandwidth_by_dimension=False, l2dist_out=None):
+    def gaussian_kernel(source, target, kernel_mul=2.0, kernel_num=5, fix_sigma=None, one_sided_bandwidth=False, l2dist_out=None):
 
         n_samples = int(source.size()[0])+int(target.size()[0])
         total = torch.cat([source, target], dim=0)
@@ -44,7 +45,7 @@ class MMD(nn.Module):
         total0 = total.unsqueeze(0).expand(int(total.size()[0]), int(total.size()[0]), int(total.size()[1]))
         total1 = total.unsqueeze(1).expand(int(total.size()[0]), int(total.size()[0]), int(total.size()[1]))
 
-        if bandwidth_by_dimension:
+        if type(fix_sigma) == list or (torch.is_tensor(fix_sigma) and fix_sigma.size()[0] > 1):
             L2_distance = ((total0-total1)**2)
         else:
             L2_distance = ((total0-total1)**2).sum(2)
@@ -55,7 +56,7 @@ class MMD(nn.Module):
         if fix_sigma is None:
             bandwidth = torch.sum(L2_distance.data) / (n_samples**2-n_samples)
         else:
-            bandwidth = fix_sigma.detach().clone() if torch.is_tensor(fix_sigma) else torch.tensor(fix_sigma)
+            bandwidth = fix_sigma.detach().clone() if torch.is_tensor(fix_sigma) else torch.tensor(fix_sigma, device=source.device)
 
         if one_sided_bandwidth:
             bandwidth /= kernel_mul ** (kernel_num - 1)
@@ -63,13 +64,17 @@ class MMD(nn.Module):
             bandwidth /= kernel_mul ** (kernel_num // 2)
         bandwidth_list = [bandwidth * (kernel_mul**i) for i in range(kernel_num)]
 
-        if bandwidth_by_dimension:
+        if type(fix_sigma) == list or (torch.is_tensor(fix_sigma) and fix_sigma.size()[0] > 1):
             kernel_val = [torch.exp(-(L2_distance / bandwidth_temp).sum(2)) for bandwidth_temp in bandwidth_list]
         else:
             kernel_val = [torch.exp(-L2_distance / bandwidth_temp) for bandwidth_temp in bandwidth_list]
 
         # some printouts that might be useful
         # print('\nMMD:')
+        # print(L2_distance)
+        # print(L2_distance / bandwidth_list[0])
+        # print(torch.exp(-(L2_distance / bandwidth_list[0])))
+        # print(torch.exp(-(L2_distance / bandwidth_list[0]).sum(2)))
         # print('L2 distance')
         # print(torch.sum(L2_distance.data) / (n_samples**2-n_samples))
         # print('bandwidths')
@@ -81,19 +86,24 @@ class MMD(nn.Module):
 
     def forward(self, source, target, parameters=None, mask=None, l2dist_out=None):
 
-        if self.calculate_fix_sigma_with_target_only:
+        nvariables = source.size()[1]
+
+        if parameters is not None:
+            source = torch.cat((source, parameters), dim=1)
+            target = torch.cat((target, parameters), dim=1)
+
+        if mask is not None:
+            source = source[mask]
+            target = target[mask]
+
+
+        if self.calculate_fix_sigma_with_target_only:  # TODO: remove?
 
             if self.fix_sigma_target_only is None:
 
                 n_samples = int(target.size()[0])
 
-                if parameters is not None:
-                    total = torch.cat((target, parameters), dim=1)
-                else:
-                    total = target
-
-                if mask is not None:
-                    total = total[mask]
+                total = target
 
                 total0 = total.unsqueeze(0).expand(int(total.size()[0]), int(total.size()[0]), int(total.size()[1]))
                 total1 = total.unsqueeze(1).expand(int(total.size()[0]), int(total.size()[0]), int(total.size()[1]))
@@ -110,13 +120,9 @@ class MMD(nn.Module):
 
             if self.fix_sigma_target_only_by_dimension is None:
 
-                if parameters is not None:
-                    total = torch.cat((target, parameters), dim=1)
-                else:
-                    total = target
+                # TODO: use target and source?
 
-                if mask is not None:
-                    total = total[mask]
+                total = torch.cat([source, target], dim=0)
 
                 total0 = total.unsqueeze(0).expand(int(total.size()[0]), int(total.size()[0]), int(total.size()[1]))
                 total1 = total.unsqueeze(1).expand(int(total.size()[0]), int(total.size()[0]), int(total.size()[1]))
@@ -140,42 +146,55 @@ class MMD(nn.Module):
 
             sigma = self.fix_sigma_target_only_by_dimension
 
-        elif self.calculate_sigma_without_parameters:
-
-            n_samples = int(source.size()[0])+int(target.size()[0])
-
-            if mask is not None:
-                total = torch.cat([source[mask], target[mask]], dim=0)
-            else:
-                total = torch.cat([source, target], dim=0)
-
-            total0 = total.unsqueeze(0).expand(int(total.size()[0]), int(total.size()[0]), int(total.size()[1]))
-            total1 = total.unsqueeze(1).expand(int(total.size()[0]), int(total.size()[0]), int(total.size()[1]))
-            L2_distance = ((total0-total1)**2).sum(2)
-
-            sigma = torch.sum(L2_distance.data) / (n_samples**2-n_samples)
-
         else:
 
             sigma = self.fix_sigma
 
-        if parameters is not None:
-            source = torch.cat((source, parameters), dim=1)
-            target = torch.cat((target, parameters), dim=1)
-
-        if mask is not None:
-            source = source[mask]
-            target = target[mask]
 
         batch_size = int(source.size()[0])
         kernels = MMD.gaussian_kernel(source, target, kernel_mul=self.kernel_mul, kernel_num=self.kernel_num, fix_sigma=sigma,
-                                      one_sided_bandwidth=self.one_sided_bandwidth, bandwidth_by_dimension=self.calculate_fix_sigma_for_each_dimension_with_target_only,
-                                      l2dist_out=l2dist_out)
+                                      one_sided_bandwidth=self.one_sided_bandwidth, l2dist_out=l2dist_out)
 
         XX = kernels[:batch_size, :batch_size]
         YY = kernels[batch_size:, batch_size:]
         XY = kernels[:batch_size, batch_size:]
         YX = kernels[batch_size:, :batch_size]
+
+        if self.exclude_diagonals:
+
+            XX = XX * (1 - torch.eye(batch_size, device=XX.device))
+            YY = YY * (1 - torch.eye(batch_size, device=YY.device))
+
+        if self.weighted:
+
+            with torch.no_grad():
+
+                bn = torch.nn.BatchNorm1d(nvariables, affine=False, track_running_stats=False, device=source.device)
+
+                source = bn(source[:, :nvariables])
+                target = bn(target[:, :nvariables])
+
+                source = torch.abs(source)
+                target = torch.abs(target)
+
+                source = torch.clamp(source, min=1)
+                target = torch.clamp(target, min=1)
+
+                p = 1.
+                source = torch.pow(source, p).mean(dim=1)
+                target = torch.pow(target, p).mean(dim=1)
+                # source, _ = torch.max(torch.abs(source), dim=1)
+                # target, _ = torch.max(torch.abs(target), dim=1)
+
+                weightXX = torch.sqrt(source.unsqueeze(0) * source.unsqueeze(1))
+                weightYY = torch.sqrt(target.unsqueeze(0) * target.unsqueeze(1))
+                weightXY = torch.sqrt(source.unsqueeze(0) * target.unsqueeze(1))
+                weightYX = torch.sqrt(target.unsqueeze(0) * source.unsqueeze(1))
+
+            XX = XX * weightXX
+            YY = YY * weightYY
+            XY = XY * weightXY
+            YX = YX * weightYX
 
         if batch_size == 0:  # if nothing survives the mask
 
@@ -184,9 +203,6 @@ class MMD(nn.Module):
         else:
 
             if self.exclude_diagonals:
-
-                XX = XX * (1 - torch.eye(batch_size, device=XX.device))
-                YY = YY * (1 - torch.eye(batch_size, device=YY.device))
 
                 loss = XX.sum() / (batch_size * batch_size - batch_size) \
                     + YY.sum() / (batch_size * batch_size - batch_size) \
