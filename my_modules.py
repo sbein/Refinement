@@ -2,6 +2,76 @@ import torch
 from torch import nn
 
 
+class EarlyStopper:
+
+    def __init__(self, metric, patience=10, mode='rel', min_delta=0.01, diff_to=0., verbose=False):
+
+        if mode not in ['rel', 'abs', 'sign', 'dsign', 'signdiffto']:
+            raise NotImplementedError('cannot understand early stopping mode: ' + mode)
+
+        self.metric = metric
+        self.patience = patience
+        self.mode = mode
+        self.min_delta = min_delta
+        self.diff_to = diff_to
+        self.verbose = verbose
+
+        self.counter = 0
+        self.meta_counter = 0
+        self.last_value = float('inf')
+        self.second_to_last_value = float('inf')
+
+    def is_converged(self, value):
+
+        if self.mode == 'rel' or self.mode == 'abs':
+
+            delta = abs(value - self.last_value)
+            if self.mode == 'rel': delta /= value
+
+            if delta < self.min_delta:
+                self.counter += 1
+            else:
+                self.counter = 0
+
+        elif self.mode == 'sign':
+
+            if value * self.last_value < 0:
+                self.counter += 1
+            else:
+                self.counter = 0
+
+        elif self.mode == 'dsign':
+
+            if (value - self.last_value) * (self.last_value - self.second_to_last_value) < 0:
+                self.counter += 1
+            else:
+                self.counter = 0
+
+        elif self.mode == 'signdiffto':
+
+            if self.verbose > 2:
+                print(value)
+                print(self.last_value)
+
+            if (value - self.diff_to) * (self.last_value - self.diff_to) < 0:
+                self.counter += 1
+            else:
+                self.counter = 0
+
+        if self.verbose > 1:
+            print('\nearly stopping counter: ' + str(self.counter))
+
+        if self.counter >= self.patience:
+            if self.verbose > 0:
+                print('early stopping criterion fulfilled!')
+            return True
+
+        self.second_to_last_value = self.last_value
+        self.last_value = value
+
+        return False
+
+
 class Dummy(nn.Module):
 
     def __init__(self, n_params):
@@ -468,6 +538,63 @@ class SelectDeepJets(nn.Module):
         return thedeepjets
 
 
+class ResBlock(nn.Module):
+    def __init__(self, in_features, hidden_features):
+        super(ResBlock, self).__init__()
+
+        self.linear1 = nn.Linear(in_features, hidden_features)
+        nn.init.kaiming_normal_(self.linear1.weight, a=0.01, mode='fan_in', nonlinearity='leaky_relu')
+        nn.init.zeros_(self.linear1.bias)
+
+        self.linear2 = nn.Linear(hidden_features, in_features)
+        nn.init.zeros_(self.linear2.weight)
+        nn.init.zeros_(self.linear2.bias)
+
+        self.activation = nn.LeakyReLU(negative_slope=0.01)
+
+    def forward(self, x):
+        x_out = self.linear1(x)
+        x_out = self.activation(x_out)
+        x_out = self.linear2(x_out)
+        x_out = self.activation(x_out)
+        return x + x_out
+
+
+class ResNet(nn.Module):
+    def __init__(self, in_features=2, hidden_features=8, out_features=1, n_resblocks=2):
+        super(ResNet, self).__init__()
+
+        modules = [
+            ('Linear_first', nn.Linear(in_features, hidden_features)),
+            ('LeakyReLu_first', nn.LeakyReLU(negative_slope=0.01))
+        ]
+        for i in range(n_resblocks):
+            modules.append(('ResBlock_' + str(i), ResBlock(hidden_features, hidden_features)))
+        modules.append(('Linear_last', nn.Linear(hidden_features, out_features)))
+
+        nn.init.kaiming_normal_(modules[0][1].weight, a=0.01, mode='fan_in', nonlinearity='leaky_relu')
+        nn.init.zeros_(modules[0][1].bias)
+
+        nn.init.zeros_(modules[-1][1].weight)
+        nn.init.zeros_(modules[-1][1].bias)
+
+        from collections import OrderedDict
+        self.net = nn.Sequential(OrderedDict(modules))
+
+        self.out_features = out_features
+
+
+    def forward(self, x):
+        residual = x
+        out = self.net(x)
+        return residual[..., -self.out_features:] + out
+
+
 if __name__ == '__main__':
+
+    # model = ResNet(in_features=6, hidden_features=128, out_features=3, n_resblocks=4)
+    # x = torch.rand(2, 6)
+    # print(x)
+    # print(model(x))
 
     pass
