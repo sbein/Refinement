@@ -120,8 +120,6 @@ class MMD(nn.Module):
 
             if self.fix_sigma_target_only_by_dimension is None:
 
-                # TODO: use target and source?
-
                 total = torch.cat([source, target], dim=0)
 
                 total0 = total.unsqueeze(0).expand(int(total.size()[0]), int(total.size()[0]), int(total.size()[1]))
@@ -130,13 +128,14 @@ class MMD(nn.Module):
 
                 if type(self.calculate_fix_sigma_for_each_dimension_with_target_only) == str:
                     if self.calculate_fix_sigma_for_each_dimension_with_target_only == 'median':
-                        self.fix_sigma_target_only_by_dimension = torch.tensor([L2_distances[:, :, i].median() for i in range(total.size()[1])], device=total.device)
+                        # mask distances that are exactly zero to avoid setting the bw to zero for one-hot-encoded dimensions
+                        self.fix_sigma_target_only_by_dimension = torch.tensor([L2_distances[:source.size()[0], source.size()[0]:, i][~(L2_distances[:source.size()[0], source.size()[0]:, i] == 0)].median() for i in range(total.size()[1])], device=total.device)
                     elif self.calculate_fix_sigma_for_each_dimension_with_target_only == 'mean':
-                        self.fix_sigma_target_only_by_dimension = torch.tensor([L2_distances[:, :, i].mean() for i in range(total.size()[1])], device=total.device)
+                        self.fix_sigma_target_only_by_dimension = torch.tensor([L2_distances[:source.size()[0], source.size()[0]:, i].mean() for i in range(total.size()[1])], device=total.device)
                     else:
                         raise NotImplementedError('cannot understand how to calculate MMD bandwidths: ' + self.fix_sigma_target_only_by_dimension)
                 else:
-                    self.fix_sigma_target_only_by_dimension = torch.tensor([L2_distances[:, :, i].median() for i in range(total.size()[1])], device=total.device)
+                    self.fix_sigma_target_only_by_dimension = torch.tensor([L2_distances[:source.size()[0], source.size()[0]:, i][~(L2_distances[:source.size()[0], source.size()[0]:, i] == 0)].median() for i in range(total.size()[1])], device=total.device)
 
                 print('\ncalculated BWs by dimension to be:')
                 print(self.fix_sigma_target_only_by_dimension)

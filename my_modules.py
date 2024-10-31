@@ -215,6 +215,10 @@ class LogitTransform(nn.Module):
 
     def forward(self, x):
 
+        # somehow this was needed...
+        self._tiny = self._tiny.to(x.device)
+        self._eps = self._eps.to(x.device)
+
         xt = torch.t(x)
         x_ = torch.empty_like(xt)
         for idim, dim in enumerate(xt):

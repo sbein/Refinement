@@ -1,8 +1,6 @@
 """
 to load packages, e.g.:
-source /cvmfs/sft.cern.ch/lcg/views/LCG_101cuda/x86_64-centos7-gcc8-opt/setup.sh
-- or -
-source /cvmfs/sft.cern.ch/lcg/views/LCG_101/x86_64-centos7-gcc8-opt/setup.sh
+source /cvmfs/sft.cern.ch/lcg/views/LCG_106_cuda/x86_64-el9-gcc11-opt/setup.sh
 
 to write terminal output to a txt file:
 python trainRegression.py 2>&1 | tee traininglog_regression.txt
@@ -222,9 +220,10 @@ snapshot_plot_kde = True
 '''
 
 # the input file is expected to contain a tree filled with jet triplets: RecJet_x_FastSim, RecJet_x_FullSim, GenJet_y,...
-in_path = '/nfs/dust/cms/user/wolfmor/Refinement/littletree_CMSSW_12_6_0_TTbar_step2_SIM_RECOBEFMIX_DIGI_L1_DIGI2RAW_L1Reco_RECO_PAT_NANO_coffea_new.root'
+in_path = '/nfs/dust/cms/user/wolfmor/Refinement/littletree_CMSSW_14_0_12_T1ttttRun3PU_step2_SIM_RECOBEFMIX_DIGI_L1_DIGI2RAW_L1Reco_RECO_PAT_NANO_PU_coffea_PUPPI.root'
 in_tree = 'tJet'
-preselection = 'GenJet_nearest_dR>0.5&&RecJet_nearest_dR_FastSim>0.5&&RecJet_nearest_dR_FullSim>0.5'
+preselection = 'GenJet_nearest_dR>0.5&&RecJet_nearest_dR_FastSim>0.5&&RecJet_nearest_dR_FullSim>0.5' \
+               '&&RecJet_btagUParTAK4B_FastSim>0&&RecJet_btagUParTAK4B_FullSim>0'  # make sure the ParT taggers are defined
 
 out_path = '/nfs/dust/cms/user/wolfmor/Refinement/TrainingOutput/output_refinement_regression_' + training_id + '.root'
 
@@ -263,14 +262,15 @@ if is_test: num_epochs = 2
 else: num_epochs = 100
 
 learning_rate = 1e-5
-lr_scheduler_gamma = 1.
 
-if is_test: batch_size = 4096
-else: batch_size = 4096
+lr_scheduler_gamma = False  # 1.
+cyclic_lr = False  # (base_lr, max_lr, step_size_up)
+
+if is_test: batch_size = 2048
+else: batch_size = 2048
 
 if is_test: num_batches = [2, 2, 2]
 else: num_batches = [500, 100, 200]
-
 
 '''
 # ##### ##### ##### ##### ##### ##### #####
@@ -292,10 +292,15 @@ VARIABLES = [
     ('RecJet_btagDeepFlavB_CLASS', ['logit']),
     ('RecJet_btagDeepFlavCvB_CLASS', ['logit']),
     ('RecJet_btagDeepFlavCvL_CLASS', ['logit']),
-    ('RecJet_btagDeepFlavQG_CLASS', ['logit'])
+    ('RecJet_btagDeepFlavQG_CLASS', ['logit']),
+
+    ('RecJet_btagUParTAK4B_CLASS', ['logit']),
+    ('RecJet_btagUParTAK4CvB_CLASS', ['logit']),
+    ('RecJet_btagUParTAK4CvL_CLASS', ['logit']),
+    ('RecJet_btagUParTAK4QvG_CLASS', ['logit']),
 ]
 
-spectators = [
+spectators_raw = [
     'GenJet_pt',
     'GenJet_eta',
     'GenJet_phi',
@@ -310,6 +315,7 @@ spectators = [
     'RecJet_eta_CLASS',
     'RecJet_phi_CLASS',
     'RecJet_mass_CLASS',
+    'RecJet_mass_CLASS_log10:=log10(RecJet_mass_CLASS)',
     'RecJet_hadronFlavour_CLASS',
     'RecJet_partonFlavour_CLASS',
     'RecJet_jetId_CLASS',
@@ -325,11 +331,24 @@ spectators = [
 ]
 excludespectators = [var[0] for var in PARAMETERS + VARIABLES]
 SPECTATORS = [
-    s for s in spectators if s not in excludespectators
+    s for s in spectators_raw if s not in excludespectators
     and s.replace('CLASS', 'FastSim') not in excludespectators
     and s.replace('CLASS', 'FullSim') not in excludespectators
 ]
+SPECTATORS = [
+    n for n in SPECTATORS if 'CLASS' not in n] + [
+    n.replace('CLASS', 'FastSim') for n in SPECTATORS if 'CLASS' in n] + [
+    n.replace('CLASS', 'FullSim') for n in SPECTATORS if 'CLASS' in n
+]
 
+# to use in omniscient loss, have to be part of SPECTATORS
+hiddenvariables = [
+    'RecJet_eta_CLASS',
+    'RecJet_mass_CLASS_log10:=log10(RecJet_mass_CLASS)',
+]
+
+hiddenvariables_indices_fast = [i for i, n in enumerate(SPECTATORS) if n in hiddenvariables + [h.replace('CLASS', 'FastSim') for h in hiddenvariables]]
+hiddenvariables_indices_full = [i for i, n in enumerate(SPECTATORS) if n in hiddenvariables + [h.replace('CLASS', 'FullSim') for h in hiddenvariables]]
 
 '''
 # ##### ##### #####
@@ -347,11 +366,17 @@ if ntest == 0:
 else:
     rdf = ROOT.RDataFrame(in_tree, in_path).Filter(preselection).Range(ntrain + nval + ntest)
 
-dict_input = rdf.AsNumpy([n[0].replace('CLASS', 'FastSim') for n in PARAMETERS + VARIABLES if '_ohe_' not in n[0]])
-dict_target = rdf.AsNumpy([n[0].replace('CLASS', 'FullSim') for n in VARIABLES])
-dict_spectators = rdf.AsNumpy([n for n in SPECTATORS if 'CLASS' not in n]
-                              + [n.replace('CLASS', 'FastSim') for n in SPECTATORS if 'CLASS' in n]
-                              + [n.replace('CLASS', 'FullSim') for n in SPECTATORS if 'CLASS' in n])
+for n, _ in PARAMETERS + VARIABLES + [(s, None) for s in SPECTATORS]:
+    if ':=' in n:
+        if 'CLASS' in n:
+            for cls in ['FastSim', 'FullSim']:
+                rdf = rdf.Define(n.split(':=')[0].replace('CLASS', cls), n.split(':=')[1].replace('CLASS', cls))
+        else:
+            rdf = rdf.Define(n.split(':=')[0], n.split(':=')[1])
+
+dict_input = rdf.AsNumpy([n[0].split(':=')[0].replace('CLASS', 'FastSim') for n in PARAMETERS + VARIABLES if '_ohe_' not in n[0]])
+dict_target = rdf.AsNumpy([n[0].split(':=')[0].replace('CLASS', 'FullSim') for n in VARIABLES])
+dict_spectators = rdf.AsNumpy([s.split(':=')[0] for s in SPECTATORS])
 
 my_dtype = torch.float32
 data_input = torch.tensor(np.stack([dict_input[var] for var in dict_input], axis=1), dtype=my_dtype, device=device)
@@ -366,7 +391,10 @@ if ntest == 0:
 if rdf.Count().GetValue() < ntrain + nval + ntest:
     raise Exception('input dataset too small, choose smaller/fewer batches')
 
-train_dataset, val_dataset, test_dataset = torch.utils.data.random_split(dataset, [ntrain, nval, ntest])
+train_dataset, val_dataset, test_dataset = torch.utils.data.random_split(
+    dataset, [ntrain, nval, ntest],
+    generator=torch.Generator().manual_seed(42)
+)
 
 
 def collate_fn(batch_):
@@ -389,16 +417,28 @@ len_test_loader = len(test_loader)
 # ##### ##### ##### ##### ##### ##### #####
 '''
 
-hadronFlavourIndex = [name[0] for name in PARAMETERS].index('RecJet_hadronFlavour_FastSim')
+if 'RecJet_hadronFlavour_FastSim' in [name[0] for name in PARAMETERS]:
 
-len_data_input = len(data_input)
-hadflav_fraction_0 = len(data_input[data_input[:, hadronFlavourIndex] == 0]) / len_data_input
-hadflav_fraction_4 = len(data_input[data_input[:, hadronFlavourIndex] == 4]) / len_data_input
-hadflav_fraction_5 = len(data_input[data_input[:, hadronFlavourIndex] == 5]) / len_data_input
+    hadronFlavourIndex = [name[0] for name in PARAMETERS].index('RecJet_hadronFlavour_FastSim')
 
+    len_data_input = len(data_input)
+    hadflav_fraction_0 = len(data_input[data_input[:, hadronFlavourIndex] == 0]) / len_data_input
+    hadflav_fraction_4 = len(data_input[data_input[:, hadronFlavourIndex] == 4]) / len_data_input
+    hadflav_fraction_5 = len(data_input[data_input[:, hadronFlavourIndex] == 5]) / len_data_input
+
+else:
+
+    hadronFlavourIndex = None
+
+    hadflav_fraction_0 = None
+    hadflav_fraction_4 = None
+    hadflav_fraction_5 = None
 
 deepjetindicesWithParameters = [idx for idx, name in enumerate(PARAMETERS + VARIABLES) if 'Jet_btagDeepFlav' in name[0]]
 deepjetindicesWithoutParameters = [idx for idx, name in enumerate(VARIABLES) if 'Jet_btagDeepFlav' in name[0]]
+
+robustpartak4indicesWithParameters = [idx for idx, name in enumerate(PARAMETERS + VARIABLES) if 'Jet_btagUParTAK4' in name[0]]
+robustpartak4indicesWithoutParameters = [idx for idx, name in enumerate(VARIABLES) if 'Jet_btagUParTAK4' in name[0]]
 
 logitmaskWithParameters = [int('logit' in name[1]) for name in PARAMETERS + VARIABLES]
 logitmaskWithoutParameters = [int('logit' in name[1]) for name in VARIABLES]
@@ -489,6 +529,14 @@ if any(tanh200maskWithoutParameters): model.add_module('Tanh200TransformBack', T
 if castto16bit:
     model.add_module('CastTo16Bit', CastTo16Bit())
 
+# alternative model
+# model = ResNet(
+#     in_features=len(VARIABLES)+len(PARAMETERS),
+#     hidden_features=nodes_hidden_layer,
+#     out_features=len(VARIABLES),
+#     n_resblocks=num_skipblocks-1
+# )
+
 model.to(device)
 
 print(model)
@@ -504,14 +552,23 @@ print(sum(p.numel() for p in model.parameters() if p.requires_grad), 'trainable 
 calculatelosseswithtransformedvariables = True
 includeparametersinmmd = True
 
-mmdfixsigma_fn = my_mmd.MMD(kernel_mul=10., kernel_num=5, fix_sigma=1.)
-mmd_fn = my_mmd.MMD(kernel_mul=10., kernel_num=5)
+# mmdfixsigma is now unbiased MMD
+mmdfixsigma_fn = my_mmd.MMD(kernel_mul=1., kernel_num=1, exclude_diagonals=True, calculate_fix_sigma_for_each_dimension_with_target_only='median')
+mmd_fn = my_mmd.MMD(kernel_mul=1., kernel_num=1, exclude_diagonals=False, calculate_fix_sigma_for_each_dimension_with_target_only='median')
+mmdomniscient_fn = my_mmd.MMD(kernel_mul=1., kernel_num=1, exclude_diagonals=False, calculate_fix_sigma_for_each_dimension_with_target_only='median')
 mse_fn = torch.nn.MSELoss()
 mae_fn = torch.nn.L1Loss()
 huber_fn = torch.nn.HuberLoss(delta=0.1)
 
+
 # these will be evaluated/monitored during training and can be used to update the model (see below)
 loss_fns = {
+
+    'mmdomniscient_output_target':
+        lambda inp_, out_, target_: mmdomniscient_fn(out_, target_,
+                                                     parameters=(OneHotEncode(source_idx=onehotencode[2], target_vals=onehotencode[1]).forward(inp_)[:, :len(PARAMETERS)]
+                                                                 if onehotencode else inp_[:, :len(PARAMETERS)])
+                                                     if includeparametersinmmd else None),
 
     'mmdfixsigma_output_target':
         lambda inp_, out_, target_: mmdfixsigma_fn(out_, target_,
@@ -540,22 +597,22 @@ loss_fns = {
     #                                                 if includeparametersinmmd else None,
     #                                                 mask=inp_[:, hadronFlavourIndex] == 5),
 
-    # 'mmdfixsigma_output_target_hadflavSum':
-    #     lambda inp_, out_, target_: hadflav_fraction_0 * mmdfixsigma_fn(out_, target_,
-    #                                                                      parameters=(OneHotEncode(source_idx=onehotencode[2], target_vals=onehotencode[1]).forward(inp_)[:, :len(PARAMETERS)]
-    #                                                                                  if onehotencode else inp_[:, :len(PARAMETERS)])
-    #                                                                      if includeparametersinmmd else None,
-    #                                                                      mask=inp_[:, hadronFlavourIndex] == 0) +
-    #                                 hadflav_fraction_4 * mmdfixsigma_fn(out_, target_,
-    #                                                                      parameters=(OneHotEncode(source_idx=onehotencode[2], target_vals=onehotencode[1]).forward(inp_)[:, :len(PARAMETERS)]
-    #                                                                                  if onehotencode else inp_[:, :len(PARAMETERS)])
-    #                                                                      if includeparametersinmmd else None,
-    #                                                                      mask=inp_[:, hadronFlavourIndex] == 4) +
-    #                                 hadflav_fraction_5 * mmdfixsigma_fn(out_, target_,
-    #                                                                      parameters=(OneHotEncode(source_idx=onehotencode[2], target_vals=onehotencode[1]).forward(inp_)[:, :len(PARAMETERS)]
-    #                                                                                  if onehotencode else inp_[:, :len(PARAMETERS)])
-    #                                                                      if includeparametersinmmd else None,
-    #                                                                      mask=inp_[:, hadronFlavourIndex] == 5),
+    'mmdfixsigma_output_target_hadflavSum':
+        lambda inp_, out_, target_: hadflav_fraction_0 * mmdfixsigma_fn(out_, target_,
+                                                                        parameters=(OneHotEncode(source_idx=onehotencode[2], target_vals=onehotencode[1]).forward(inp_)[:, :len(PARAMETERS)]
+                                                                                    if onehotencode else inp_[:, :len(PARAMETERS)])
+                                                                        if includeparametersinmmd else None,
+                                                                        mask=inp_[:, hadronFlavourIndex] == 0) +
+                                    hadflav_fraction_4 * mmdfixsigma_fn(out_, target_,
+                                                                        parameters=(OneHotEncode(source_idx=onehotencode[2], target_vals=onehotencode[1]).forward(inp_)[:, :len(PARAMETERS)]
+                                                                                    if onehotencode else inp_[:, :len(PARAMETERS)])
+                                                                        if includeparametersinmmd else None,
+                                                                        mask=inp_[:, hadronFlavourIndex] == 4) +
+                                    hadflav_fraction_5 * mmdfixsigma_fn(out_, target_,
+                                                                        parameters=(OneHotEncode(source_idx=onehotencode[2], target_vals=onehotencode[1]).forward(inp_)[:, :len(PARAMETERS)]
+                                                                                    if onehotencode else inp_[:, :len(PARAMETERS)])
+                                                                        if includeparametersinmmd else None,
+                                                                        mask=inp_[:, hadronFlavourIndex] == 5),
 
     'mmd_output_target':
         lambda inp_, out_, target_: mmd_fn(out_, target_,
@@ -563,26 +620,26 @@ loss_fns = {
                                                        if onehotencode else inp_[:, :len(PARAMETERS)])
                                            if includeparametersinmmd else None),
 
-    'mmd_output_target_hadflav0':
-        lambda inp_, out_, target_: mmd_fn(out_, target_,
-                                           parameters=(OneHotEncode(source_idx=onehotencode[2], target_vals=onehotencode[1]).forward(inp_)[:, :len(PARAMETERS)]
-                                                       if onehotencode else inp_[:, :len(PARAMETERS)])
-                                           if includeparametersinmmd else None,
-                                           mask=inp_[:, hadronFlavourIndex] == 0),
+    # 'mmd_output_target_hadflav0':
+    #     lambda inp_, out_, target_: mmd_fn(out_, target_,
+    #                                        parameters=(OneHotEncode(source_idx=onehotencode[2], target_vals=onehotencode[1]).forward(inp_)[:, :len(PARAMETERS)]
+    #                                                    if onehotencode else inp_[:, :len(PARAMETERS)])
+    #                                        if includeparametersinmmd else None,
+    #                                        mask=inp_[:, hadronFlavourIndex] == 0),
 
-    'mmd_output_target_hadflav4':
-        lambda inp_, out_, target_: mmd_fn(out_, target_,
-                                           parameters=(OneHotEncode(source_idx=onehotencode[2], target_vals=onehotencode[1]).forward(inp_)[:, :len(PARAMETERS)]
-                                                       if onehotencode else inp_[:, :len(PARAMETERS)])
-                                           if includeparametersinmmd else None,
-                                           mask=inp_[:, hadronFlavourIndex] == 4),
+    # 'mmd_output_target_hadflav4':
+    #     lambda inp_, out_, target_: mmd_fn(out_, target_,
+    #                                        parameters=(OneHotEncode(source_idx=onehotencode[2], target_vals=onehotencode[1]).forward(inp_)[:, :len(PARAMETERS)]
+    #                                                    if onehotencode else inp_[:, :len(PARAMETERS)])
+    #                                        if includeparametersinmmd else None,
+    #                                        mask=inp_[:, hadronFlavourIndex] == 4),
 
-    'mmd_output_target_hadflav5':
-        lambda inp_, out_, target_: mmd_fn(out_, target_,
-                                           parameters=(OneHotEncode(source_idx=onehotencode[2], target_vals=onehotencode[1]).forward(inp_)[:, :len(PARAMETERS)]
-                                                       if onehotencode else inp_[:, :len(PARAMETERS)])
-                                           if includeparametersinmmd else None,
-                                           mask=inp_[:, hadronFlavourIndex] == 5),
+    # 'mmd_output_target_hadflav5':
+    #     lambda inp_, out_, target_: mmd_fn(out_, target_,
+    #                                        parameters=(OneHotEncode(source_idx=onehotencode[2], target_vals=onehotencode[1]).forward(inp_)[:, :len(PARAMETERS)]
+    #                                                    if onehotencode else inp_[:, :len(PARAMETERS)])
+    #                                        if includeparametersinmmd else None,
+    #                                        mask=inp_[:, hadronFlavourIndex] == 5),
 
     'mmd_output_target_hadflavSum':
         lambda inp_, out_, target_: hadflav_fraction_0 * mmd_fn(out_, target_,
@@ -629,17 +686,39 @@ loss_fns = {
                                                    sigmoidtransform=calculatelosseswithtransformedvariables,
                                                    nanotransform=True).forward(out_).sum(dim=1).std(),
 
+    'robustpartak4sum_mean':
+        lambda inp_, out_, target_: SelectDeepJets(deepjetindices=robustpartak4indicesWithoutParameters,
+                                                   sigmoidtransform=calculatelosseswithtransformedvariables,
+                                                   nanotransform=True).forward(out_).sum(dim=1).mean(),
+
+    'robustpartak4sum_std':
+        lambda inp_, out_, target_: SelectDeepJets(deepjetindices=robustpartak4indicesWithoutParameters,
+                                                   sigmoidtransform=calculatelosseswithtransformedvariables,
+                                                   nanotransform=True).forward(out_).sum(dim=1).std(),
 
 }
 
 # if constraints are specified MDMM algorithm will be used
-mdmm_primary_loss = 'mmd_output_target_hadflavSum'
+mdmm_primary_loss = 'mse_output_target'
+
+mdmm_switch_off_criterion = EarlyStopper(metric='mmdfixsigma_output_target', patience=3,
+                                         mode='signdiffto', diff_to=0.,
+                                         verbose=1)
+mdmm_primary_loss_after_switch_off = 'mmd_output_target_hadflavSum'
+
+lr_lambda_factor = 20.
+# (loss, epsilon, initial lambda, scale)
 mdmm_constraints_config = [
+    ('mmdfixsigma_output_target', 0., -1., 1.),
+
     ('deepjetsum_mean', 1.),
-    ('deepjetsum_std', 0.001),
-    # ('huber_output_target', 0.00053),
+    ('deepjetsum_std', 0.00067),
+
+    ('robustpartak4sum_mean', 1.),
+    ('robustpartak4sum_std', 0.00069),
 ]
-mdmm_constraints = [my_mdmm.EqConstraint(loss_fns[c[0]], c[1]) for c in mdmm_constraints_config]
+mdmm_constraints = [my_mdmm.EqConstraint(loss_fns[c[0]], c[1], lmbda_init=c[2] if len(c) > 2 else 0., scale=c[3] if len(c) > 3 else 1.)
+                    for c in mdmm_constraints_config]
 
 # if no constraints are specified no MDMM is used and these loss scales are used
 nomdmm_loss_scales = {
@@ -669,14 +748,18 @@ nomdmm_loss_scales = {
 
 if len(mdmm_constraints) > 0:
     optimizer = my_mdmm.MDMM(mdmm_constraints)
-    trainer = optimizer.make_optimizer(model.parameters(), optimizer=torch.optim.Adam, lr=learning_rate)
+    trainer = optimizer.make_optimizer(model.parameters(), optimizer=torch.optim.Adam, lr=learning_rate, lr_lambda_factor=lr_lambda_factor)
 else:
     optimizer = torch.optim.Adam
     trainer = optimizer(model.parameters(), lr=learning_rate)
 
 
-lr_scheduler = torch.optim.lr_scheduler.ExponentialLR(trainer, gamma=lr_scheduler_gamma, last_epoch=-1)
-
+if lr_scheduler_gamma:
+    lr_scheduler = torch.optim.lr_scheduler.ExponentialLR(trainer, gamma=lr_scheduler_gamma, last_epoch=-1)
+elif cyclic_lr:
+    lr_scheduler = torch.optim.lr_scheduler.CyclicLR(trainer, base_lr=cyclic_lr[0], max_lr=cyclic_lr[1], step_size_up=cyclic_lr[2], cycle_momentum=False)
+else:
+    lr_scheduler = None
 
 '''
 # ##### ##### #####
@@ -698,6 +781,7 @@ start_points_train = {loss: 0. for loss in loss_fns}
 start_points_validation = {loss: 0. for loss in loss_fns}
 end_points_train = {loss: 0. for loss in loss_fns}
 end_points_validation = {loss: 0. for loss in loss_fns}
+mdmm_switch_off = False
 iteration = 0
 for epoch in range(num_epochs):
 
@@ -709,13 +793,16 @@ for epoch in range(num_epochs):
     epoch_train_loss = 0.
     epoch_validation_loss = 0.
 
+    epoch_mdmm_switch_off_criterion_value = 0.
+    if mdmm_switch_off: mdmm_primary_loss = mdmm_primary_loss_after_switch_off
+
     if epoch == 0:
 
         if is_verbose:
             print('\nevaluate benchmarks and starting points')
 
         for data_loader, benchmarks, start_points in zip([train_loader, validation_loader], [benchmarks_train, benchmarks_validation], [start_points_train, start_points_validation]):
-            for batch, (inp, target, _) in enumerate(data_loader):
+            for batch, (inp, target, spectators) in enumerate(data_loader):
 
                 out = model(inp)
 
@@ -734,8 +821,20 @@ for epoch in range(num_epochs):
                         out = LogitTransform(mask=logitmaskWithoutParameters, factor=logitfactor, onnxcompatible=False, eps=epsilon, tiny=tiny).forward(out)
 
                 for loss in loss_fns:
-                    benchmarks[loss] += loss_fns[loss](inp, inp[:, real_len_parameters:], target).item()
-                    start_points[loss] += loss_fns[loss](inp, out, target).item()
+                    if 'omniscient' in loss:
+                        benchmarks[loss] += loss_fns[loss](
+                            torch.cat((inp, spectators[:, hiddenvariables_indices_fast]), dim=1),
+                            torch.cat((inp[:, real_len_parameters:], spectators[:, hiddenvariables_indices_fast]), dim=1),
+                            torch.cat((target, spectators[:, hiddenvariables_indices_full]), dim=1)
+                        ).item()
+                        start_points[loss] += loss_fns[loss](
+                            torch.cat((inp, spectators[:, hiddenvariables_indices_fast]), dim=1),
+                            torch.cat((out, spectators[:, hiddenvariables_indices_fast]), dim=1),
+                            torch.cat((target, spectators[:, hiddenvariables_indices_full]), dim=1)
+                        ).item()
+                    else:
+                        benchmarks[loss] += loss_fns[loss](inp, inp[:, real_len_parameters:], target).item()
+                        start_points[loss] += loss_fns[loss](inp, out, target).item()
 
         for loss in loss_fns:
             benchmarks_train[loss] /= len_train_loader
@@ -743,13 +842,13 @@ for epoch in range(num_epochs):
             start_points_train[loss] /= len_train_loader
             start_points_validation[loss] /= len_validation_loader
 
-        csvwriter_train.writerow(['epoch', 'iteration'] + [loss for loss in loss_fns] + ['lmbda_' + c[0] for c in mdmm_constraints_config])
-        csvwriter_train.writerow(['benchmark', 'benchmark'] + [benchmarks_train[loss] for loss in loss_fns] + [c[1] for c in mdmm_constraints_config])
-        csvwriter_train.writerow(['start', 'start'] + [start_points_train[loss] for loss in loss_fns] + [c.lmbda.item() for c in mdmm_constraints])
+        csvwriter_train.writerow(['epoch', 'iteration'] + [loss for loss in loss_fns] + ['lmbda_' + c[0] for c in mdmm_constraints_config] + ['epsilon_' + c[0] for c in mdmm_constraints_config])
+        csvwriter_train.writerow(['benchmark', 'benchmark'] + [benchmarks_train[loss] for loss in loss_fns] + [c[1] for c in mdmm_constraints_config] + [c.value.item() if hasattr(c, 'value') else -1. for c in mdmm_constraints])
+        csvwriter_train.writerow(['start', 'start'] + [start_points_train[loss] for loss in loss_fns] + [c.lmbda.item() for c in mdmm_constraints] + [c.value.item() if hasattr(c, 'value') else -1. for c in mdmm_constraints])
         
-        csvwriter_validation.writerow(['epoch', 'iteration'] + [loss for loss in loss_fns] + ['lmbda_' + c[0] for c in mdmm_constraints_config])
-        csvwriter_validation.writerow(['benchmark', 'benchmark'] + [benchmarks_validation[loss] for loss in loss_fns] + [c[1] for c in mdmm_constraints_config])
-        csvwriter_validation.writerow(['start', 'start'] + [start_points_validation[loss] for loss in loss_fns] + [c.lmbda.item() for c in mdmm_constraints])
+        csvwriter_validation.writerow(['epoch', 'iteration'] + [loss for loss in loss_fns] + ['lmbda_' + c[0] for c in mdmm_constraints_config] + ['epsilon_' + c[0] for c in mdmm_constraints_config])
+        csvwriter_validation.writerow(['benchmark', 'benchmark'] + [benchmarks_validation[loss] for loss in loss_fns] + [c[1] for c in mdmm_constraints_config] + [c.value.item() if hasattr(c, 'value') else -1. for c in mdmm_constraints])
+        csvwriter_validation.writerow(['start', 'start'] + [start_points_validation[loss] for loss in loss_fns] + [c.lmbda.item() for c in mdmm_constraints] + [c.value.item() if hasattr(c, 'value') else -1. for c in mdmm_constraints])
 
 
         print('\nbenchmarks')
@@ -765,7 +864,7 @@ for epoch in range(num_epochs):
             model.eval()
             with torch.no_grad():
                 
-                for batch, (inp, target, _) in enumerate(validation_loader):
+                for batch, (inp, target, spectators) in enumerate(validation_loader):
 
                     if batch >= snapshot_num_batches: break
 
@@ -810,7 +909,7 @@ for epoch in range(num_epochs):
         print('\ntraining loop')
 
     trainer.zero_grad()
-    for batch, (inp, target, _) in enumerate(train_loader):
+    for batch, (inp, target, spectators) in enumerate(train_loader):
 
         if is_verbose:
             print('batch {}'.format(batch))
@@ -832,15 +931,22 @@ for epoch in range(num_epochs):
                 out = LogitTransform(mask=logitmaskWithoutParameters, factor=logitfactor, onnxcompatible=False, eps=epsilon, tiny=tiny).forward(out)
 
         for loss in loss_fns:
-            loss_vals[loss] = loss_fns[loss](inp, out, target)
+            if 'omniscient' in loss:
+                loss_vals[loss] = loss_fns[loss](
+                    torch.cat((inp, spectators[:, hiddenvariables_indices_fast]), dim=1),
+                    torch.cat((out, spectators[:, hiddenvariables_indices_fast]), dim=1),
+                    torch.cat((target, spectators[:, hiddenvariables_indices_full]), dim=1)
+                )
+            else:
+                loss_vals[loss] = loss_fns[loss](inp, out, target)
 
         train_loss = None
         if len(mdmm_constraints) > 0:
-            mdmm_return = optimizer(loss_vals[mdmm_primary_loss], inp, out, target)
+            mdmm_return = optimizer(loss_vals[mdmm_primary_loss], inp, out, target, switch_off_constraints=mdmm_switch_off)
             train_loss = mdmm_return.value
         else:
             for loss in loss_fns:
-                if nomdmm_loss_scales[loss] == 0.: continue
+                if loss not in nomdmm_loss_scales or nomdmm_loss_scales[loss] == 0.: continue
                 if train_loss is None:
                     train_loss = nomdmm_loss_scales[loss] * loss_vals[loss]
                 else:
@@ -851,14 +957,18 @@ for epoch in range(num_epochs):
         trainer.step()
         trainer.zero_grad()
 
+        if lr_scheduler is not None and cyclic_lr:
+            lr_scheduler.step()
+
         epoch_train_loss += train_loss.item()
         if epoch + 1 == num_epochs:
             for loss in loss_fns:
                 end_points_train[loss] += loss_vals[loss].item()
 
-        csvwriter_train.writerow([epoch, iteration] + [loss_vals[loss].item() for loss in loss_fns] + [c.lmbda.item() for c in mdmm_constraints])
+        csvwriter_train.writerow([epoch, iteration] + [loss_vals[loss].item() for loss in loss_fns] + [c.lmbda.item() for c in mdmm_constraints] + [c.value.item() if hasattr(c, 'value') else -1. for c in mdmm_constraints])
 
         if is_verbose:
+
             print('train loss {:.5f}'.format(train_loss.item()))
 
         iteration += 1
@@ -871,7 +981,7 @@ for epoch in range(num_epochs):
     model.eval()
     with torch.no_grad():
 
-        for batch, (inp, target, _) in enumerate(validation_loader):
+        for batch, (inp, target, spectators) in enumerate(validation_loader):
 
             if is_verbose:
                 print('batch {}'.format(batch))
@@ -905,20 +1015,34 @@ for epoch in range(num_epochs):
                     out_list_transformed = torch.cat((out_list_transformed, out))
 
             for loss in loss_fns:
-                loss_vals[loss] = loss_fns[loss](inp, out, target)
+                if 'omniscient' in loss:
+                    loss_vals[loss] = loss_fns[loss](
+                        torch.cat((inp, spectators[:, hiddenvariables_indices_fast]), dim=1),
+                        torch.cat((out, spectators[:, hiddenvariables_indices_fast]), dim=1),
+                        torch.cat((target, spectators[:, hiddenvariables_indices_full]), dim=1)
+                    )
+                else:
+                    loss_vals[loss] = loss_fns[loss](inp, out, target)
                 
             
             validation_loss = None
             if len(mdmm_constraints) > 0:
-                mdmm_return = optimizer(loss_vals[mdmm_primary_loss], inp, out, target)
+                mdmm_return = optimizer(loss_vals[mdmm_primary_loss], inp, out, target, switch_off_constraints=mdmm_switch_off, allow_adaptive_epsilon=not mdmm_switch_off)
                 validation_loss = mdmm_return.value
             else:
                 for loss in loss_fns:
-                    if nomdmm_loss_scales[loss] == 0.: continue
+                    if loss not in nomdmm_loss_scales or nomdmm_loss_scales[loss] == 0.: continue
                     if validation_loss is None:
                         validation_loss = nomdmm_loss_scales[loss] * loss_vals[loss]
                     else:
                         validation_loss += nomdmm_loss_scales[loss] * loss_vals[loss]
+
+
+            if len(mdmm_constraints) > 0 and mdmm_switch_off_criterion and isinstance(mdmm_switch_off_criterion, EarlyStopper) and not mdmm_switch_off:
+                if mdmm_switch_off_criterion.metric.startswith('lmbda_'):
+                    epoch_mdmm_switch_off_criterion_value += {cc[0]: c.lmbda.item() for cc, c in zip(mdmm_constraints_config, mdmm_constraints)}[mdmm_switch_off_criterion.metric.replace('lmbda_', '')]
+                else:
+                    epoch_mdmm_switch_off_criterion_value += loss_vals[mdmm_switch_off_criterion.metric].item()
 
 
             epoch_validation_loss += validation_loss.item()
@@ -926,18 +1050,26 @@ for epoch in range(num_epochs):
                 for loss in loss_fns:
                     end_points_validation[loss] += loss_vals[loss].item()
 
-            csvwriter_validation.writerow([epoch, iteration] + [loss_vals[loss].item() for loss in loss_fns] + [c.lmbda.item() for c in mdmm_constraints])
+            csvwriter_validation.writerow([epoch, iteration] + [loss_vals[loss].item() for loss in loss_fns] + [c.lmbda.item() for c in mdmm_constraints] + [c.value.item() if hasattr(c, 'value') else -1. for c in mdmm_constraints])
 
             if is_verbose:
                 print('validation loss {:.5f}'.format(validation_loss.item()))
 
-        print('[{} / {}] validation loss: {:.10f}'.format(epoch + 1, num_epochs, epoch_train_loss / len_train_loader))
+        print('[{} / {}] validation loss: {:.10f}'.format(epoch + 1, num_epochs, epoch_validation_loss / len_validation_loader))
 
         if save_snapshots and epoch % snapshot_everyXepoch == 0:
             snapshot(inp_list, target_list, out_list, epoch+1, is_transformed=False, plot_kde=snapshot_plot_kde)
             snapshot(inp_list_transformed, target_list_transformed, out_list_transformed, epoch+1, is_transformed=True, plot_kde=snapshot_plot_kde)
 
-    lr_scheduler.step()
+    if lr_scheduler is not None and lr_scheduler_gamma:
+        lr_scheduler.step()
+
+    if len(mdmm_constraints) > 0 and mdmm_switch_off_criterion and not mdmm_switch_off:
+        if isinstance(mdmm_switch_off_criterion, EarlyStopper):
+            mdmm_switch_off = mdmm_switch_off_criterion.is_converged(epoch_mdmm_switch_off_criterion_value / len_validation_loader)
+        else:
+            if epoch >= mdmm_switch_off_criterion:
+                mdmm_switch_off = True
 
     if epoch + 1 == num_epochs:
 
@@ -951,17 +1083,6 @@ for epoch in range(num_epochs):
         print('\nend points validation')
         print(', '.join([loss for loss in loss_fns]))
         print(', '.join([str(end_points_validation[loss]) for loss in loss_fns]))
-
-
-'''
-# ##### ##### #####
-# save model
-# ##### ##### #####
-'''
-
-m = torch.jit.script(model)
-torch.jit.save(m, out_path.replace('output', 'model').replace('.root', '.pt'))
-print('\njust created ' + out_path.replace('output', 'model').replace('.root', '.pt'))
 
 
 '''
@@ -1032,8 +1153,9 @@ with torch.no_grad():
 for branch in out_dict:
     out_dict[branch] = torch.cat(out_dict[branch]).detach().cpu().numpy()
 
-out_rdf = ROOT.RDF.MakeNumpyDataFrame(out_dict)
-out_rdf.Snapshot('tJet', out_path)
+# out_rdf = ROOT.RDF.MakeNumpyDataFrame(out_dict)
+out_rdf = ROOT.RDF.FromNumpy(out_dict)
+out_rdf.Snapshot(in_tree, out_path)
 print('just created ' + out_path)
 
 csvfile_train.close()
@@ -1041,3 +1163,14 @@ print('just created ' + csvfile_train.name)
 
 csvfile_validation.close()
 print('just created ' + csvfile_validation.name)
+
+
+'''
+# ##### ##### #####
+# save model
+# ##### ##### #####
+'''
+
+m = torch.jit.script(model)
+torch.jit.save(m, out_path.replace('output', 'model').replace('.root', '.pt'))
+print('\njust created ' + out_path.replace('output', 'model').replace('.root', '.pt'))
