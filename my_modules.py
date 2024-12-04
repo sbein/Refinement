@@ -153,12 +153,13 @@ class TanhTransform(nn.Module):
     with a value of tanh(1)=+-0.76... for x=+-norm
     """
 
-    def __init__(self, mask, norm=1):
+    def __init__(self, mask, norm=1, factor=1):
 
         super(TanhTransform, self).__init__()
 
         self._mask = mask
         self._norm = norm
+        self._factor = factor
 
     def forward(self, x):
 
@@ -166,7 +167,7 @@ class TanhTransform(nn.Module):
         x_ = torch.empty_like(xt)
         for idim, dim in enumerate(xt):
             if self._mask[idim]:
-                x_[idim] = torch.tanh(dim / self._norm)
+                x_[idim] = self._factor * torch.tanh(dim / self._norm)
             else:
                 x_[idim] = dim
 
@@ -175,12 +176,13 @@ class TanhTransform(nn.Module):
 
 class TanhTransformBack(nn.Module):
 
-    def __init__(self, mask, norm=1):
+    def __init__(self, mask, norm=1, factor=1):
 
         super(TanhTransformBack, self).__init__()
 
         self._mask = mask
         self._norm = norm
+        self._factor = factor
 
     def forward(self, x):
 
@@ -188,8 +190,12 @@ class TanhTransformBack(nn.Module):
         x_ = torch.empty_like(xt)
         for idim, dim in enumerate(xt):
             if self._mask[idim]:
-                x_[idim] = 0.5 * torch.log((1 + dim) / (1 - dim)) * self._norm
-                # x_[idim] = torch.atanh(dim) * self._norm
+
+                dim = torch.clamp(dim / self._factor, max=1.-1e-7)
+
+                # x_[idim] = 0.5 * torch.log((1 + dim) / (1 - dim)) * self._norm
+                x_[idim] = torch.atanh(dim) * self._norm
+
             else:
                 x_[idim] = dim
 
@@ -203,7 +209,7 @@ class LogitTransform(nn.Module):
     with a value of 0 for x=0.5
     """
 
-    def __init__(self, mask, eps=1e-6, tiny=1e-6, factor=1., onnxcompatible=False):
+    def __init__(self, mask, eps=1e-8, tiny=1e-8, factor=1., onnxcompatible=False):
 
         super(LogitTransform, self).__init__()
 
