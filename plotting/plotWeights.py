@@ -3,7 +3,7 @@ import numpy as np
 import matplotlib.pyplot as plt
 
 
-training_id = '20240312_2'
+training_id = '20240529_1'
 
 model_path = '/nfs/dust/cms/user/wolfmor/Refinement/TrainingOutput/model_refinement_regression_' + training_id + '.pt'
 out_path = '/afs/desy.de/user/w/wolfmor/Plots/Refinement/Training/Regression/weights_' + training_id + '.png'
@@ -20,8 +20,15 @@ while hasattr(model, 'LinearWithSkipConnection_' + str(i)):
     for modulelist in skipblock.children():
         for child in modulelist.children():
             if child.original_name == 'Linear':
-                weights[i].append(torch.flatten(child.weight).detach().cpu().numpy())
+                weights[i].append(torch.flatten(child.weight).detach().cpu().numpy())  # .bias
     i += 1
+weights.append([])
+skipblock = getattr(model, 'LinearWithSkipConnection_last')
+for modulelist in skipblock.children():
+    for child in modulelist.children():
+        if child.original_name == 'Linear':
+            weights[i].append(torch.flatten(child.weight).detach().cpu().numpy())  # .bias
+
 
 plotwidth = 10
 plotheight = 5
@@ -33,8 +40,12 @@ ncols = max([len(row) for row in weights])
 
 fig, axes = plt.subplots(nrows=nrows, ncols=ncols, figsize=(ncols * plotwidth, nrows * plotheight))
 
-if nrows == 1:
+if nrows == 1 and ncols == 1:
+    axes = [[axes]]
+elif nrows == 1:
     axes = [axes]
+elif ncols == 1:
+    axes = [[a] for a in axes]
 
 for i in range(nrows):
     for j in range(len(weights[i])):

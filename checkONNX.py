@@ -10,10 +10,10 @@ print(torch.__version__)
 
 device = torch.device('cuda:0' if torch.cuda.is_available() else 'cpu')
 
-trainingID = '20221127'
+trainingID = '20240717'
 
-path_torch = '/nfs/dust/cms/user/wolfmor/Refinement/TrainingOutput/regression_model_' + trainingID + '.pt'
-path_onnx = '/nfs/dust/cms/user/wolfmor/Refinement/TrainingOutput/regression_model_' + trainingID + '_opset11.onnx'
+path_torch = '/nfs/dust/cms/user/wolfmor/Refinement/TrainingOutput/model_refinement_regression_' + trainingID + '.pt'
+path_onnx = '/nfs/dust/cms/user/wolfmor/Refinement/TrainingOutput/model_refinement_regression_' + trainingID + '_opset11.onnx'
 
 model_torch = torch.jit.load(path_torch)
 model_torch.eval()
@@ -23,12 +23,16 @@ model_torch.to(device)
 # onnx.checker.check_model(onnx_model)
 
 
-x = torch.tensor([
-    [331.162, 0.994019,  0.,  0.0215759,  0.945312, 0.380615,  0.141968],
-    [17.7534, -0.269958,  0.,  0.00829315,  0.873047, 0.057373,  0.515137],
-    [9.8506e+01, -7.7051e-01,  5.0000e+00,  9.9951e-01,  2.3007e-05, 6.5674e-01,  2.9907e-01]],
-    requires_grad=True, device=device
-)
+n_params = 3
+n_vars = 3
+batch_size = 1
+x = torch.rand(batch_size, n_params+n_vars, requires_grad=True, device=device)
+# x = torch.tensor([
+#     [331.162, 0.994019,  0.,  0.0215759,  0.945312, 0.380615,  0.141968],
+#     [17.7534, -0.269958,  0.,  0.00829315,  0.873047, 0.057373,  0.515137],
+#     [9.8506e+01, -7.7051e-01,  5.0000e+00,  9.9951e-01,  2.3007e-05, 6.5674e-01,  2.9907e-01]],
+#     requires_grad=True, device=device
+# )
 torch_out = model_torch(x)
 
 
