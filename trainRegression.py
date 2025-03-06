@@ -698,7 +698,7 @@ loss_fns = {
 
 }
 
-# if constraints are specified MDMM algorithm will be used
+# if constraints are specified MDMM algorithm will be used (see SB below)
 mdmm_primary_loss = 'mse_output_target'
 
 mdmm_switch_off_criterion = EarlyStopper(metric='mmdfixsigma_output_target', patience=3,
@@ -708,11 +708,13 @@ mdmm_primary_loss_after_switch_off = 'mmd_output_target_hadflavSum'
 
 lr_lambda_factor = 20.
 # (loss, epsilon, initial lambda, scale)
-mdmm_constraints_config = [
+
+#SB: Set following to empty list to do 1-stage MDMM
+mdmm_constraints_config = [ 
     ('mmdfixsigma_output_target', 0., -1., 1.),
 
     ('deepjetsum_mean', 1.),
-    ('deepjetsum_std', 0.00067),
+    ('deepjetsum_std', 0.00067),#SB: measured value in FullSim
 
     ('robustpartak4sum_mean', 1.),
     ('robustpartak4sum_std', 0.00069),
