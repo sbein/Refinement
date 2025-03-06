@@ -98,7 +98,7 @@ else:
     #num_epochs = 5
     #num_epochs = 1
 
-learning_rate = 1e-10
+learning_rate = 2e-10
 lr_scheduler_gamma = 1.
 
 if is_test: batch_size = 4096
@@ -126,32 +126,32 @@ PARAMETERS = [
 
 # if using DeepJetConstraint the DeepJet transformations have to be explicitly adapted in the DeepJetConstraint module
 VARIABLES = [
-    ('RecMuon_mvaMuID_CLASS', []),#'logit'
-    ('RecMuon_softMva_CLASS', ['logit']),#'logit'
-    ('RecMuon_mvaLowPt_CLASS',[]),#'fisher'
-    ('RecMuon_mvaTTH_CLASS',  []), #'fisher'
+    ('RecMuon_mvaMuID_CLASS', ['logit']),#'logit'
+    ('RecMuon_softMva_CLASS', []),#'logit'
+    ('RecMuon_mvaLowPt_CLASS',['fisher']),#'fisher'
+    ('RecMuon_mvaTTH_CLASS',  ['fisher']), #'fisher'
     ('RecMuon_dxy_CLASS', []),
-    ('RecMuon_dxyErr_CLASS', []),#'log10'
+    ('RecMuon_dxyErr_CLASS', ['log10']),#'log10'
     ('RecMuon_dxybs_CLASS', []),
     ('RecMuon_dz_CLASS', []),
-    ('RecMuon_dzErr_CLASS', []),#'log10'
+    ('RecMuon_dzErr_CLASS', ['log10']),#'log10'
     ('RecMuon_eta_CLASS', []),
-    ('RecMuon_ip3d_CLASS', []),#'log10'
+    ('RecMuon_ip3d_CLASS', ['log10']),#'log10'
     ('RecMuon_jetPtRelv2_CLASS', []),
     ('RecMuon_pt_CLASS', []),
     #('RecMuon_ptErr_CLASS', []),    ##this one seems to throw things off
-    ('RecMuon_jetRelIso_CLASS', []),#'log10'#good
+    ('RecMuon_jetRelIso_CLASS', ['log10']),#'log10'#good
     ('RecMuon_mass_CLASS', []),#good
-    ('RecMuon_miniPFRelIso_all_CLASS', []),#'log10'#good
-    ('RecMuon_miniPFRelIso_chg_CLASS', []),#'log10'#good
-    ('RecMuon_pfRelIso03_all_CLASS', []),#'log10'#good
-    ('RecMuon_pfRelIso03_chg_CLASS', []),#'log10'#good
-    ('RecMuon_pfRelIso04_all_CLASS', []),#'log10'#good
+    ('RecMuon_miniPFRelIso_all_CLASS', ['log10']),#'log10'#good
+    ('RecMuon_miniPFRelIso_chg_CLASS', ['log10']),#'log10'#good
+    ('RecMuon_pfRelIso03_all_CLASS', ['log10']),#'log10'#good
+    ('RecMuon_pfRelIso03_chg_CLASS', ['log10']),#'log10'#good
+    ('RecMuon_pfRelIso04_all_CLASS', ['log10']),#'log10'#good
     ('RecMuon_phi_CLASS', []),#good
-    ('RecMuon_segmentComp_CLASS', []),#good
+    ('RecMuon_segmentComp_CLASS', ['logit']),#good
     ('RecMuon_sip3d_CLASS', []),#good
-    ('RecMuon_tkRelIso_CLASS', []),#'log10'#good
-    ('RecMuon_tunepRelPt_CLASS', []),#good
+    ('RecMuon_tkRelIso_CLASS', ['log10']),#'log10'#good
+    #('RecMuon_tunepRelPt_CLASS', []),#doesn't give nans but it's a funny distribution
     #('RecMuon_bsConstrainedChi2_CLASS', []),#bad
     #('RecMuon_bsConstrainedPt_CLASS', []),#bad
     #('RecMuon_bsConstrainedPtErr_CLASS', [])#bad
@@ -334,7 +334,7 @@ print(sum(p.numel() for p in model.parameters() if p.requires_grad), 'trainable 
 calculatelosseswithtransformedvariables = True
 includeparametersinmmd = True
 
-mmdfixsigma_fn = my_mmd.MMD(kernel_mul=5., kernel_num=5,one_sided_bandwidth=True,calculate_fix_sigma_for_each_dimension_with_target_only=True)# fix_sigma=true by default
+mmdfixsigma_fn = my_mmd.MMD(kernel_mul=5., kernel_num=4,one_sided_bandwidth=False,calculate_fix_sigma_for_each_dimension_with_target_only=True)# fix_sigma=true by default
 #mmdfixsigma_fn = my_mmd.MMD(kernel_mul=5, kernel_num=5, fix_sigma=1.)
 mmd_fn = my_mmd.MMD(kernel_mul=2., kernel_num=5)
 mse_fn = torch.nn.MSELoss()
@@ -387,7 +387,7 @@ mdmm_constraints = []#As Moritz if this should be made an empty list
 # if no constraints are specified no MDMM is used and these loss scales are used
 nomdmm_loss_scales = {
 
-    'mmdfixsigma_output_target': 1.,
+    'mmdfixsigma_output_target': 1.,##we liked this for a while - now try dynamic one...
     'mmd_output_target': 0,##Ask Moritz if this would be right to have changed
     'mse_output_target': 0.,
     'mse_input_output': 0.,

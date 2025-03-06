@@ -61,7 +61,6 @@ class MMD(nn.Module):
             for idx in nan_indices:
                 # Unpack the indices
                 i, j, k = idx.tolist()
-                
                 # Print the problematic values
                 print(f"Inspecting NaN at index [{i}, {j}, {k}]:")
                 print(f"Value in total0: {total0[i, j, k].item()}")
@@ -89,15 +88,6 @@ class MMD(nn.Module):
             kernel_val = [torch.exp(-(L2_distance / bandwidth_temp).sum(2)) for bandwidth_temp in bandwidth_list]
         else:
             kernel_val = [torch.exp(-L2_distance / bandwidth_temp) for bandwidth_temp in bandwidth_list]
-
-        # some printouts that might be useful
-        # print('\nMMD:')
-        # print('L2 distance')
-        # print(torch.sum(L2_distance.data) / (n_samples**2-n_samples))
-        # print('bandwidths')
-        # print(bandwidth_list)
-        # print('mmd values')
-        # print([torch.mean(k[:int(source.size()[0]), :int(source.size()[0])] + k[int(source.size()[0]):, int(source.size()[0]):] - k[:int(source.size()[0]), int(source.size()[0]):] - k[int(source.size()[0]):, :int(source.size()[0])]) for k in kernel_val])
 
         for i, kv in enumerate(kernel_val):
             if torch.isnan(kv).any():
@@ -158,10 +148,11 @@ class MMD(nn.Module):
                     print("Sample values in total1:", total1[0][0][:10])
                     print("Sample differences:", (total0-total1)[0][0][:10])
 
-                self.fix_sigma_target_only_by_dimension = L2_distance.data / (n_samples**2-n_samples)
+                ##MoritzSuggestsReplacing##self.fix_sigma_target_only_by_dimension = L2_distance.data / (n_samples**2-n_samples)
+                self.fix_sigma_target_only_by_dimension = torch.tensor([((total0-total1)**2)[:, :, i].median() for i in range(total.size()[1])], device=total.device)
 
                 print('\ncalculated BWs by dimension to be:')
-                print(self.fix_sigma_target_only_by_dimension)
+                print('fix_sigma_target_only_by_dimension', self.fix_sigma_target_only_by_dimension)
 
             sigma = self.fix_sigma_target_only_by_dimension
 
@@ -200,26 +191,33 @@ class MMD(nn.Module):
                     print("NaN detected in sigma (non-tensor) inside forward")
                 
 
-        if parameters is not None:
-            source = torch.cat((source, parameters), dim=1)
-            target = torch.cat((target, parameters), dim=1)
-
-        if mask is not None:
-            source = source[mask]
-            target = target[mask]
-
         batch_size = int(source.size()[0])
         if torch.isnan(source).any():
             print("NaN detected in source before gaussian_kernel")
-        if torch.isnan(target).any():
-            print("NaN detected in target before gaussian_kernel")
+            print('mask was', mask)
+            print('parameters was', parameters)
+            print('sigma was', sigma)
+            print('self.fix_sigma_target_only was', self.fix_sigma_target_only)
+            print('self.calculate_fix_sigma_for_each_dimension_with_target_only was', self.calculate_fix_sigma_for_each_dimension_with_target_only)
+            print('self.calculate_fix_sigma_with_target_only was', self.calculate_fix_sigma_with_target_only)
+            print('self.fix_sigma_target_only_by_dimension was', self.fix_sigma_target_only_by_dimension)
+            print('self.fix_sigma_target_only was', self.fix_sigma_target_only)
             
+        if parameters is not None:
+            source = torch.cat((source, parameters), dim=1)
+            target = torch.cat((target, parameters), dim=1)
+            
+        if mask is not None:
+            source = source[mask]
+            target = target[mask]
+                        
         kernels = MMD.gaussian_kernel(source, target, kernel_mul=self.kernel_mul, kernel_num=self.kernel_num, fix_sigma=sigma,
                                       one_sided_bandwidth=self.one_sided_bandwidth, bandwidth_by_dimension=self.calculate_fix_sigma_for_each_dimension_with_target_only,
                                       l2dist_out=l2dist_out)
     
         if torch.isnan(kernels).any():
             print("NaN detected in kernels output from gaussian_kernel")
+            print("Source stats - Min:", source.min().item(), "Max:", source.max().item(), "Mean:", source.mean().item())            
 
         XX = kernels[:batch_size, :batch_size]
         YY = kernels[batch_size:, batch_size:]
@@ -231,6 +229,18 @@ class MMD(nn.Module):
         else:
             loss = torch.mean(XX + YY - XY - YX)
 
+
+
+
+        # Check for NaNs in loss
+        if torch.isnan(loss).any():
+            print("NaN detected in loss computation")
+            print("XX, YY, XY, YX statistics:")
+            print("XX - Min:", XX.min().item(), "Max:", XX.max().item(), "Mean:", XX.mean().item())
+            print("YY - Min:", YY.min().item(), "Max:", YY.max().item(), "Mean:", YY.mean().item())
+            print("XY - Min:", XY.min().item(), "Max:", XY.max().item(), "Mean:", XY.mean().item())
+            print("YX - Min:", YX.min().item(), "Max:", YX.max().item(), "Mean:", YX.mean().item())
+    
         return loss
 
 

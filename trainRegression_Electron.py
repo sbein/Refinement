@@ -45,7 +45,7 @@ training_id = datetime.today().strftime('%Y%m%d%H%M') # will be used as an ident
 
 is_test = False
 #verbose = 10
-verbosity = 10
+verbosity = 1
 
 '''
 # ##### ##### ##### #####
@@ -93,14 +93,12 @@ fisherfactor = 1.0# this is the 1/2 that is there in the official definition
 
 if is_test: num_epochs = 2
 else: 
-    num_epochs = 100
     num_epochs = 1000
-    num_epochs = 2000
-
+    #num_epochs = 200
     #num_epochs = 5
     #num_epochs = 0
 
-learning_rate = 1e-6#was 1e-5
+learning_rate = 1e-8
 lr_scheduler_gamma = 1.
 
 if is_test: batch_size = 4096
@@ -126,7 +124,6 @@ PARAMETERS = [
     ('GenElectron_eta', []),
 ]
 
-# if using DeepJetConstraint the DeepJet transformations have to be explicitly adapted in the DeepJetConstraint module
 VARIABLES = [
     ('RecElectron_dxy_CLASS', []),
     ('RecElectron_dxyErr_CLASS', []),
@@ -330,7 +327,6 @@ for k in range(num_skipblocks - 1):
                                                                                           dropout=dropout))
 
 if any(logitmaskWithoutParameters): model.add_module('LogitTransformBack', LogitTransformBack(mask=logitmaskWithoutParameters, factor=logitfactor))
-if any(log10maskWithoutParameters): model.add_module('Log10TransformBack', LogitTransformBack(mask=log10maskWithoutParameters))
 if any(fishermaskWithoutParameters): model.add_module('FisherTransformBack', FisherTransformBack(mask=fishermaskWithoutParameters, factor=fisherfactor))
 if any(tanh200maskWithoutParameters): model.add_module('Tanh200TransformBack', TanhTransformBack(mask=tanh200maskWithoutParameters, norm=200))
 
@@ -353,7 +349,7 @@ calculatelosseswithtransformedvariables = True
 includeparametersinmmd = True
 
 mmdfixsigma_fn = my_mmd.MMD(kernel_mul=5., kernel_num=5,one_sided_bandwidth=True,calculate_fix_sigma_for_each_dimension_with_target_only=True)# fix_sigma=true by default
-mmd_fn = my_mmd.MMD(kernel_mul=3., kernel_num=5)
+mmd_fn = my_mmd.MMD(kernel_mul=2., kernel_num=5)
 mse_fn = torch.nn.MSELoss()
 mae_fn = torch.nn.L1Loss()
 huber_fn = torch.nn.HuberLoss(delta=0.1)
@@ -392,12 +388,12 @@ loss_fns = {
 
 # if constraints are specified MDMM algorithm will be used
 mdmm_primary_loss = 'mmd_output_target_hadflavSum'
-mdmm_constraints_config = [
+mdmm_constraints_config = [##this can go
     ('deepjetsum_mean', 1.),
     ('deepjetsum_std', 0.001),
     # ('huber_output_target', 0.00053),
 ]
-mdmm_constraints_config = []
+mdmm_constraints_config = []##better for the output CSV files
 mdmm_constraints = []#As Moritz if this should be made an empty list
 #[my_mdmm.EqConstraint(loss_fns[c[0]], c[1]) for c in mdmm_constraints_config]
 
@@ -405,7 +401,7 @@ mdmm_constraints = []#As Moritz if this should be made an empty list
 nomdmm_loss_scales = {
 
     'mmdfixsigma_output_target': 1.,
-    'mmd_output_target': 0.,##Ask Moritz if this would be right to have changed
+    'mmd_output_target': 0,##Ask Moritz if this would be right to have changed
     'mse_output_target': 0.,
     'mse_input_output': 0.,
     'mae_output_target': 0.,
@@ -479,13 +475,13 @@ for epoch in range(num_epochs):
                     if any(logitmaskWithParameters):
                         inp = LogitTransform(mask=logitmaskWithParameters, factor=logitfactor, onnxcompatible=False, eps=epsilon, tiny=tiny).forward(inp)
                     if any(logitmaskWithoutParameters):
-                        target = LogitTransform(mask=logitmaskWithoutParameters, base=10, eps=epsilon, tiny=tiny).forward(target)
-                        out = LogitTransform(mask=logitmaskWithoutParameters, base=10, eps=epsilon, tiny=tiny).forward(out)
+                        target = LogitTransform(mask=logitmaskWithoutParameters, factor=logitfactor, onnxcompatible=False, eps=epsilon, tiny=tiny).forward(target)
+                        out = LogitTransform(mask=logitmaskWithoutParameters, factor=logitfactor, onnxcompatible=False, eps=epsilon, tiny=tiny).forward(out)
                     if any(log10maskWithParameters):
-                        inp = LogTransform(mask=log10maskWithParameters, base=10, eps=epsilon).forward(inp)
+                        inp = LogTransform(mask=log10maskWithParameters).forward(inp)
                     if any(log10maskWithoutParameters):
-                        target = LogTransform(mask=log10maskWithoutParameters, base=10, eps=epsilon).forward(target)
-                        out = LogTransform(mask=log10maskWithoutParameters, base=10, eps=epsilon).forward(out)                        
+                        target = LogTransform(mask=log10maskWithoutParameters).forward(target)
+                        out = LogTransform(mask=log10maskWithoutParameters).forward(out)                        
                     if any(fishermaskWithParameters):
                         inp = FisherTransform(mask=fishermaskWithParameters, factor=fisherfactor, onnxcompatible=False, eps=epsilon).forward(inp)
                     if any(fishermaskWithoutParameters):
@@ -542,13 +538,13 @@ for epoch in range(num_epochs):
             if any(logitmaskWithParameters):
                 inp = LogitTransform(mask=logitmaskWithParameters, factor=logitfactor, onnxcompatible=False, eps=epsilon, tiny=tiny).forward(inp)
             if any(logitmaskWithoutParameters):
-                target = LogitTransform(mask=logitmaskWithoutParameters, base=10, eps=epsilon, tiny=tiny).forward(target)
-                out = LogitTransform(mask=logitmaskWithoutParameters, base=10, eps=epsilon, tiny=tiny).forward(out)
+                target = LogitTransform(mask=logitmaskWithoutParameters, factor=logitfactor, onnxcompatible=False, eps=epsilon, tiny=tiny).forward(target)
+                out = LogitTransform(mask=logitmaskWithoutParameters, factor=logitfactor, onnxcompatible=False, eps=epsilon, tiny=tiny).forward(out)
             if any(log10maskWithParameters):
-                inp = LogTransform(mask=log10maskWithParameters, base=10, eps=epsilon).forward(inp)
+                inp = LogTransform(mask=log10maskWithParameters).forward(inp)
             if any(log10maskWithoutParameters):
-                target = LogTransform(mask=log10maskWithoutParameters, base=10, eps=epsilon).forward(target)
-                out = LogTransform(mask=log10maskWithoutParameters, base=10, eps=epsilon).forward(out)                
+                target = LogTransform(mask=log10maskWithoutParameters).forward(target)
+                out = LogTransform(mask=log10maskWithoutParameters).forward(out)                
             if any(fishermaskWithParameters):
                 inp = FisherTransform(mask=fishermaskWithParameters, factor=fisherfactor, onnxcompatible=False, eps=epsilon).forward(inp)
             if any(fishermaskWithoutParameters):
@@ -613,13 +609,13 @@ for epoch in range(num_epochs):
                 if any(logitmaskWithParameters):
                     inp = LogitTransform(mask=logitmaskWithParameters, factor=logitfactor, onnxcompatible=False, eps=epsilon, tiny=tiny).forward(inp)
                 if any(logitmaskWithoutParameters):
-                    target = LogitTransform(mask=logitmaskWithoutParameters, base=10, eps=epsilon, tiny=tiny).forward(target)
-                    out = LogitTransform(mask=logitmaskWithoutParameters, base=10, eps=epsilon, tiny=tiny).forward(out)
+                    target = LogitTransform(mask=logitmaskWithoutParameters, factor=logitfactor, onnxcompatible=False, eps=epsilon, tiny=tiny).forward(target)
+                    out = LogitTransform(mask=logitmaskWithoutParameters, factor=logitfactor, onnxcompatible=False, eps=epsilon, tiny=tiny).forward(out)
                 if any(log10maskWithParameters):
-                    inp = LogTransform(mask=log10maskWithParameters, base=10, eps=epsilon).forward(inp)
+                    inp = LogTransform(mask=log10maskWithParameters).forward(inp)
                 if any(log10maskWithoutParameters):
-                    target = LogTransform(mask=log10maskWithoutParameters, base=10, eps=epsilon).forward(target)
-                    out = LogTransform(mask=log10maskWithoutParameters, base=10, eps=epsilon).forward(out)                    
+                    target = LogTransform(mask=log10maskWithoutParameters).forward(target)
+                    out = LogTransform(mask=log10maskWithoutParameters).forward(out)                    
                 if any(fishermaskWithParameters):
                     inp = FisherTransform(mask=fishermaskWithParameters, factor=fisherfactor, onnxcompatible=False, eps=epsilon).forward(inp)
                 if any(fishermaskWithoutParameters):

@@ -41,7 +41,7 @@ def read_csv(filepath):
 in_path = '/nfs/dust/cms/user/beinsam/FastSim/Refinement/Regress/TrainingOutput/traininglog_refineMuon_regression_TRAININGID'
 #in_path = '/nfs/dust/cms/user/beinsam/FastSim/Refinement/Regress/TrainingOutput//traininglog_refineElectron_regression_TRAININGID'
 #training_id = '202403092142'
-training_id = '202403201615'
+training_id = '202404301415'
 
 
 # with training ID:
@@ -180,8 +180,8 @@ for iplot, plot in enumerate(plots):
             mdmm_constraint_plotted = True
         print('we should be here', plot, min_y_axis_value)
         
-        min_y_axis_value = min(min_y_axis_value, data_train[p][-3] * 0.97)
-        max_y_axis_value = max(min_y_axis_value, data_train[p][-3] * 1.03)        
+        min_y_axis_value = min(min_y_axis_value, data_train[p][-3] * 0.7)
+        max_y_axis_value = max(min_y_axis_value, data_train[p][-3] * 1.5)        
         print('and after', plot, data_train[p], min_y_axis_value)
 
     styleAx(ax)

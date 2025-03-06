@@ -94,7 +94,7 @@ fisherfactor = 1.0# this is the 1/2 that is there in the official definition
 if is_test: num_epochs = 2
 else: 
     num_epochs = 1000
-    #num_epochs = 200
+    num_epochs = 100
     #num_epochs = 5
     #num_epochs = 0
 
