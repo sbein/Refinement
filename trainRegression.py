@@ -24,6 +24,7 @@ import my_mmd
 import my_mdmm
 from my_modules import *
 
+SingleStage = False
 
 def snapshot(_inp, _target, _out, _epoch, is_transformed=False, plot_kde=True):
 
@@ -708,15 +709,16 @@ mdmm_primary_loss_after_switch_off = 'mmd_output_target_hadflavSum'
 
 lr_lambda_factor = 20.
 # (loss, epsilon, initial lambda, scale)
-mdmm_constraints_config = [
-    ('mmdfixsigma_output_target', 0., -1., 1.),
+if SingleStage: mdmm_constraints_config = []
+else:
+    mdmm_constraints_config = [
+        ('mmdfixsigma_output_target', 0., -1., 1.),
 
-    ('deepjetsum_mean', 1.),
-    ('deepjetsum_std', 0.00067),
-
-    ('robustpartak4sum_mean', 1.),
-    ('robustpartak4sum_std', 0.00069),
-]
+        ('deepjetsum_mean', 1.),
+        ('deepjetsum_std', 0.00067),
+        ('robustpartak4sum_mean', 1.),
+        ('robustpartak4sum_std', 0.00069),
+    ]
 mdmm_constraints = [my_mdmm.EqConstraint(loss_fns[c[0]], c[1], lmbda_init=c[2] if len(c) > 2 else 0., scale=c[3] if len(c) > 3 else 1.)
                     for c in mdmm_constraints_config]
 
