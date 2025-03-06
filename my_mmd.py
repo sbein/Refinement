@@ -141,7 +141,11 @@ class MMD(nn.Module):
                 print(self.fix_sigma_target_only_by_dimension)
 
                 for ibw, bw in enumerate(self.fix_sigma_target_only_by_dimension):
-                    if bw <= 0: raise Exception('bandwidth is <= 0 for variable number' + str(ibw))
+                    if bw <= 0: raise Exception('bandwidth is <= 0 for variable number ' + str(ibw))
+                    if torch.isnan(bw):
+                        print('\nsetting BW to 1 at position ' + str(ibw))
+                        self.fix_sigma_target_only_by_dimension[ibw] = 1.  # TODO: really??
+                        # raise Exception('bandwidth is nan for variable number ' + str(ibw))
 
             sigma = self.fix_sigma_target_only_by_dimension
 

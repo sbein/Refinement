@@ -103,6 +103,9 @@ class LogTransform(nn.Module):
 
     def forward(self, x):
 
+        self._base = self._base.to(x.device)
+        self._eps = self._eps.to(x.device)
+
         xt = torch.t(x)
         x_ = torch.empty_like(xt)
         for idim, dim in enumerate(xt):
@@ -130,6 +133,8 @@ class LogTransformBack(nn.Module):
             self.register_buffer('_base', torch.tensor(base))
 
     def forward(self, x):
+
+        self._base = self._base.to(x.device)
 
         xt = torch.t(x)
         x_ = torch.empty_like(xt)
