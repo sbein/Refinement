@@ -27,11 +27,11 @@ batch_size = 4096
 '''
 
 # the input file is expected to contain a tree filled with jet triplets: RecJet_x_FastSim, RecJet_x_FullSim, GenJet_y,...
-in_path = '/nfs/dust/cms/user/wolfmor/Refinement/littletree_CMSSW_14_0_12_T1ttttRun3PU_step2_SIM_RECOBEFMIX_DIGI_L1_DIGI2RAW_L1Reco_RECO_PAT_NANO_PU_coffea_PUPPI_new_test.root'
+in_path = '/data/dust/user/wolfmor/Refinement/littletree_CMSSW_14_0_12_T1ttttRun3PU_step2_SIM_RECOBEFMIX_DIGI_L1_DIGI2RAW_L1Reco_RECO_PAT_NANO_PU_coffea_PUPPI_new_test.root'
 in_tree = 'tJet'
 preselection = '1'  # 'GenJet_nearest_dR>0.5&&RecJet_nearest_dR_FastSim>0.5&&RecJet_nearest_dR_FullSim>0.5'
 
-model_path = '/nfs/dust/cms/user/wolfmor/Refinement/TrainingOutput/tanhNorm1200_SB3_LP2_NHL1024_LR1eM04_PTtanhlogit_retrain2_with_dataset4.pt'
+model_path = '/data/dust/user/wolfmor/Refinement/TrainingOutput/tanhNorm1200_SB3_LP2_NHL1024_LR1eM04_PTtanhlogit_retrain2_with_dataset4.pt'
 
 out_path = model_path.replace('.pt', '_eval_PUPPI.root')
 

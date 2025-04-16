@@ -12,8 +12,8 @@ device = torch.device('cuda:0' if torch.cuda.is_available() else 'cpu')
 
 trainingID = '20240717'
 
-path_torch = '/nfs/dust/cms/user/wolfmor/Refinement/TrainingOutput/model_refinement_regression_' + trainingID + '.pt'
-path_onnx = '/nfs/dust/cms/user/wolfmor/Refinement/TrainingOutput/model_refinement_regression_' + trainingID + '_opset11.onnx'
+path_torch = '/data/dust/user/wolfmor/Refinement/TrainingOutput/model_refinement_regression_' + trainingID + '.pt'
+path_onnx = '/data/dust/user/wolfmor/Refinement/TrainingOutput/model_refinement_regression_' + trainingID + '_opset11.onnx'
 
 model_torch = torch.jit.load(path_torch)
 model_torch.eval()

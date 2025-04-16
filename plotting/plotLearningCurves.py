@@ -2,7 +2,7 @@ import csv
 import numpy as np
 import matplotlib.lines as mlines
 import matplotlib.pyplot as plt
-
+import os, sys
 
 def read_csv(filepath):
 
@@ -35,19 +35,24 @@ def read_csv(filepath):
         {s[0]: np.array(s[1]) for s in starts if len(s)>1}
 
 
-# specify the training_id and where the csv output file is (TRAININGID will be replaced by the training_id)
-#in_path = '/nfs/dust/cms/user/beinsam/FastSim/Refinement/Regress/traininglog_refinement_regression_TRAININGID'
-#in_path = '/nfs/dust/cms/user/beinsam/FastSim/Refinement/Regress/FestTrainingOutput/traininglog_refineJet_regression_TRAININGID'
-in_path = '/nfs/dust/cms/user/beinsam/FastSim/Refinement/Regress/TrainingOutput/traininglog_refineMuon_regression_TRAININGID'
-#in_path = '/nfs/dust/cms/user/beinsam/FastSim/Refinement/Regress/TrainingOutput//traininglog_refineElectron_regression_TRAININGID'
-#training_id = '202403092142'
-training_id = '202404301415'
 
-
+try: training_id = sys.argv[1]
+except: 
+    training_id = '7April2025'
+    training_id = '20231105_1'
+    training_id = '20250407'
+    training_id = '7April2025withClassifier'
+    training_id = '7April2025'
+    
+    
+in_path = '/data/dust/user/beinsam/FastSim/Refinement/Regress/TrainingOutput/traininglog_refinement_regression_TRAININGID'
+if not os.path.exists('figs'+training_id):
+    os.system('mkdir figs'+training_id)
+    
 # with training ID:
 #out_path = 'LCs_' + in_path.split('/')[-1].split('traininglog_')[-1].replace('_regression','').replace('TRAININGID',training_id)
 # without training ID 
-out_path = 'plots/Rec' + in_path.split('traininglog_refine')[-1].split('_regression')[0]+'0'
+out_path = 'figs'+training_id+'/Rec' + in_path.split('traininglog_refine')[-1].split('_regression')[0]+'0'
 print('out_path',out_path)
 # specify what losses should be plotted (need to be present in the csv output file)
 plots = [
@@ -151,7 +156,6 @@ fig, axes = plt.subplots(nrows=len(plots), ncols=2, figsize=(2 * plotwidth, len(
 
 if len(plots) == 1:
     axes = [axes]
-
 
 
 for iplot, plot in enumerate(plots):

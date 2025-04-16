@@ -13,7 +13,7 @@ condor_submit -i interactive.submit
 source /afs/desy.de/user/b/beinsam/.bash_profile
 torefinement
 cmsenv
-cd /nfs/dust/cms/user/beinsam/FastSim/Refinement/Regress
+cd /data/dust/user/beinsam/FastSim/Refinement/Regress
 source /cvmfs/sft.cern.ch/lcg/views/LCG_101cuda/x86_64-centos7-gcc8-opt/setup.sh
 #to write terminal output to a txt file:
 python3 trainRegression_Electron.py 2>&1 | tee traininglog_regressionElectron.txt
@@ -53,11 +53,11 @@ verbosity = 1
 # ##### ##### ##### #####
 '''
 
-in_path = '/nfs/dust/cms/user/beinsam/FastSim/Refinement/output/mc_fullfast_T1tttt_JetsMuonsElectronsPhotonsTausEvents.root'
+in_path = '/data/dust/user/beinsam/FastSim/Refinement/output/mc_fullfast_T1tttt_JetsMuonsElectronsPhotonsTausEvents.root'
 in_tree = 'tElectron'
 preselection = ''#'GenElectron_nearest_dR>0.5&&RecElectron_nearest_dR_FastSim>0.5&&RecElectron_nearest_dR_FullSim>0.5'
 preselection = "RecElectron_mvaMuID_FastSim > -2 && RecElectron_mvaMuID_FullSim > -2 && RecElectron_softMva_FastSim > -2 && RecElectron_softMva_FullSim > -2"
-out_path = '/nfs/dust/cms/user/beinsam/FastSim/Refinement/Regress/TrainingOutput/output_refineElectron_regression_' + training_id + '.root'
+out_path = '/data/dust/user/beinsam/FastSim/Refinement/Regress/TrainingOutput/output_refineElectron_regression_' + training_id + '.root'
 
 
 '''

@@ -220,12 +220,12 @@ snapshot_plot_kde = True
 '''
 
 # the input file is expected to contain a tree filled with jet triplets: RecJet_x_FastSim, RecJet_x_FullSim, GenJet_y,...
-in_path = '/nfs/dust/cms/user/wolfmor/Refinement/littletree_CMSSW_14_0_12_T1ttttRun3PU_step2_SIM_RECOBEFMIX_DIGI_L1_DIGI2RAW_L1Reco_RECO_PAT_NANO_PU_coffea_PUPPI.root'
+in_path = '/data/dust/user/wolfmor/Refinement/littletree_CMSSW_14_0_12_T1ttttRun3PU_step2_SIM_RECOBEFMIX_DIGI_L1_DIGI2RAW_L1Reco_RECO_PAT_NANO_PU_coffea_PUPPI.root'
 in_tree = 'tJet'
 preselection = 'GenJet_nearest_dR>0.5&&RecJet_nearest_dR_FastSim>0.5&&RecJet_nearest_dR_FullSim>0.5' \
                '&&RecJet_btagUParTAK4B_FastSim>0&&RecJet_btagUParTAK4B_FullSim>0'  # make sure the ParT taggers are defined
 
-out_path = '/nfs/dust/cms/user/wolfmor/Refinement/TrainingOutput/output_refinement_regression_' + training_id + '.root'
+out_path = '/data/dust/user/beinsam/FastSim/Refinement/Regress/TrainingOutput/output_refinement_regression_' + training_id + '.root'
 
 
 '''

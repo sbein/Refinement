@@ -13,7 +13,7 @@ condor_submit -i interactive.submit
 source /afs/desy.de/user/b/beinsam/.bash_profile
 torefinement
 cmsenv
-cd /nfs/dust/cms/user/beinsam/FastSim/Refinement/Regress
+cd /data/dust/user/beinsam/FastSim/Refinement/Regress
 source /cvmfs/sft.cern.ch/lcg/views/LCG_101cuda/x86_64-centos7-gcc8-opt/setup.sh
 #to write terminal output to a txt file:
 python3 trainRegression_Muon.py 2>&1 | tee traininglog_regressionMuon.txt
@@ -53,11 +53,11 @@ verbosity = 10
 # ##### ##### ##### #####
 '''
 
-in_path = '/nfs/dust/cms/user/beinsam/FastSim/Refinement/output/mc_fullfast_T1tttt_JetsMuonsElectronsPhotonsTausEvents.root'
+in_path = '/data/dust/user/beinsam/FastSim/Refinement/output/mc_fullfast_T1tttt_JetsMuonsElectronsPhotonsTausEvents.root'
 in_tree = 'tMuon'
 preselection = ''#'GenMuon_nearest_dR>0.5&&RecMuon_nearest_dR_FastSim>0.5&&RecMuon_nearest_dR_FullSim>0.5'
 preselection = "RecMuon_mvaMuID_FastSim > -10 && RecMuon_mvaMuID_FullSim > -10 && RecMuon_softMva_FastSim > -10 && RecMuon_softMva_FullSim > -10"
-out_path = '/nfs/dust/cms/user/beinsam/FastSim/Refinement/Regress/TrainingOutput/output_refineMuon_regression_' + training_id + '.root'
+out_path = '/data/dust/user/beinsam/FastSim/Refinement/Regress/TrainingOutput/output_refineMuon_regression_' + training_id + '.root'
 
 
 '''

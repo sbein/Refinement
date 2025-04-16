@@ -4,17 +4,27 @@
 import ROOT
 from plotting import Plotting
 from array import array
-
+import os, sys
 
 normalize = True
 
-training_id = '20231105_1'
+try: training_id = sys.argv[1]
+except: 
+    training_id = '7April2025'
+    training_id = '20231105_1'
+    training_id = '20250407'
+    training_id = '7April2025withClassifier'
+    training_id = '7April2025'
+    
+#fname = '/data/dust/user/wolfmor/Refinement/TrainingOutput/output_refinement_regression_TRAININGID.root'
+fname = '/data/dust/user/beinsam/FastSim/Refinement/Regress/TrainingOutput/output_refinement_regression_TRAININGID.root'
 
-fname = '/nfs/dust/cms/user/wolfmor/Refinement/TrainingOutput/output_refinement_regression_TRAININGID.root'
 fin = ROOT.TFile(fname.replace('TRAININGID', training_id))
 tree = fin.Get('tJet')
 
-nameout = 'regression_1D_' + training_id + '_VARIABLE.png'
+if not os.path.exists('figs'+training_id):
+    os.system('mkdir figs'+training_id)
+nameout = 'reg1D' + '_VARIABLE.png'
 
 
 # (name, suffix, label, color, fillstyle, linewidth, selection, legend option)
@@ -27,15 +37,30 @@ samples = [
 ]
 
 # (name, branch name, (nbins, xlow, xhigh), title, ratio plot range, selection)
+##variables = [
+##    ('DeepFlavB', 'RecJet_btagDeepFlavB_CLASS', (60, -0.1, 1.1), 'DeepJet b+bb+lepb Discriminator', 0.3, '1')
+##]
+nbins = 60
+#nbins = 20
 variables = [
-    ('DeepFlavB', 'RecJet_btagDeepFlavB_CLASS', (60, -0.1, 1.1), 'DeepJet b+bb+lepb Discriminator', 0.3, '1')
+    ('JetPt',     'RecJet_pt_CLASS', (nbins, 0, 1000),'Jet p_{T} [GeV]', 0.3, '1'),
+    ('DeepFlavB', 'RecJet_btagDeepFlavB_CLASS', (nbins, -0.1, 1.1),'DeepJet b+bb+lepb Discriminator', 0.3, '1'),
+    ('DeepFlavCvB', 'RecJet_btagDeepFlavCvB_CLASS', (nbins, -0.1, 1.1),'DeepJet C/B Discriminator', 0.3, '1'),
+    ('DeepFlavCvL', 'RecJet_btagDeepFlavCvL_CLASS', (nbins, -0.1, 1.1),'DeepJet C/L Discriminator', 0.3, '1'),
+    ('DeepFlavQG', 'RecJet_btagDeepFlavQG_CLASS', (nbins, -0.1, 1.1),'DeepJet Q/g Discriminator', 0.3, '1'),
+    ('UParTAK4B', 'RecJet_btagUParTAK4B_CLASS', (nbins, -0.1, 1.1),'UParTAK4 B Discriminator', 0.3, '1'),
+    ('UParTAK4CvB', 'RecJet_btagUParTAK4CvB_CLASS', (nbins, -0.1, 1.1),'UParTAK4 C/B Discriminator', 0.3, '1'),
+    ('UParTAK4CvL', 'RecJet_btagUParTAK4CvL_CLASS', (nbins, -0.1, 1.1),'UParTAK4 C/L Discriminator', 0.3, '1'),
+    ('UParTAK4QG', 'RecJet_btagUParTAK4QvG_CLASS', (nbins, -0.1, 1.1),'UParTAK4 Q/g Discriminator', 0.3, '1'),
+    
 ]
+if 'Classifier' in training_id: variables.append(('Z classifier', 'RecJet_ffClassifier_CLASS', (nbins, -0.1, 1.1),'Z(Fast-Full classifier)', 0.3, '1'))
 
 height = 800
 width = 800
 
 p = Plotting(
-    text='(13 TeV)',
+    text='(13.6 TeV)',
     extratext='Simulation',
     H_ref=height,
     W_ref=width,
@@ -59,38 +84,38 @@ for v in variables:
     c0.cd()
 
     for s in samples:
-
+        hstub = v[0] + s[0]
         if type(v[2]) == list:
-            histos[v[0] + s[0]] = ROOT.TH1F('h' + v[0] + s[0], '', len(v[2])-1, array('d', v[2]))
+            histos[hstub] = ROOT.TH1F('h' + hstub, '', len(v[2])-1, array('d', v[2]))
         else:
-            histos[v[0] + s[0]] = ROOT.TH1F('h' + v[0] + s[0], '', v[2][0], v[2][1], v[2][2])
+            histos[hstub] = ROOT.TH1F('h' + hstub, '', v[2][0], v[2][1], v[2][2])
 
-        tree.Draw(v[1].replace('CLASS', s[1]) + '>>h' + v[0] + s[0], s[6] + v[5].replace('CLASS', s[1]), '')
+        tree.Draw(v[1].replace('CLASS', s[1]) + '>>h' + hstub, s[6] + v[5].replace('CLASS', s[1]), '')
 
-        if normalize: histos[v[0] + s[0]].Scale(1. / histos[v[0] + s[0]].Integral())
+        if normalize: histos[hstub].Scale(1. / histos[hstub].Integral())
 
-        histos[v[0] + s[0]].SetFillStyle(s[4])
-        histos[v[0] + s[0]].SetFillColor(s[3])
-        histos[v[0] + s[0]].SetLineWidth(s[5])
-        if 'test' not in s[0] and 'val' not in s[0]: histos[v[0] + s[0]].SetMarkerSize(0)
-        histos[v[0] + s[0]].SetLineColor(s[3])
-        histos[v[0] + s[0]].SetMarkerColor(s[3])
+        histos[hstub].SetFillStyle(s[4])
+        histos[hstub].SetFillColor(s[3])
+        histos[hstub].SetLineWidth(s[5])
+        if 'test' not in s[0] and 'val' not in s[0]: histos[hstub].SetMarkerSize(0)
+        histos[hstub].SetLineColor(s[3])
+        histos[hstub].SetMarkerColor(s[3])
 
     for s in samples:
 
         if s[0] == 'full': continue
-
-        if not histos[v[0] + s[0]].GetSumw2N(): histos[v[0] + s[0]].Sumw2()
-        ratios[v[0] + s[0]] = histos[v[0] + s[0]].Clone('hr' + v[0] + s[0])
-        ratios[v[0] + s[0]].UseCurrentStyle()
-        ratios[v[0] + s[0]].SetStats(0)
-        ratios[v[0] + s[0]].Divide(histos[v[0] + 'full'])
-        ratios[v[0] + s[0]].SetFillStyle(s[4])
-        ratios[v[0] + s[0]].SetFillColor(s[3])
-        ratios[v[0] + s[0]].SetLineWidth(s[5])
-        ratios[v[0] + s[0]].SetMarkerSize(0)
-        ratios[v[0] + s[0]].SetLineColor(s[3])
-        ratios[v[0] + s[0]].SetMarkerColor(s[3])
+        hstub = v[0] + s[0]
+        if not histos[hstub].GetSumw2N(): histos[hstub].Sumw2()
+        ratios[hstub] = histos[hstub].Clone('hr' + hstub)
+        ratios[hstub].UseCurrentStyle()
+        ratios[hstub].SetStats(0)
+        ratios[hstub].Divide(histos[v[0] + 'full'])
+        ratios[hstub].SetFillStyle(s[4])
+        ratios[hstub].SetFillColor(s[3])
+        ratios[hstub].SetLineWidth(s[5])
+        ratios[hstub].SetMarkerSize(0)
+        ratios[hstub].SetLineColor(s[3])
+        ratios[hstub].SetMarkerColor(s[3])
 
 
     leg[v[0]] = ROOT.TLegend(0.5, 0.6, 0.95, 0.9)
@@ -124,11 +149,17 @@ for v in variables:
     histos[v[0] + 'emptyloghist'].Draw('AXIS')
 
     for s in samples:
-        if 'test' in s[0] or 'val' in s[0]: histos[v[0] + s[0]].Draw('e0 x0 same')
-        else: histos[v[0] + s[0]].Draw('hist same')
+        hstub = v[0] + s[0]
+        if 'test' in s[0] or 'val' in s[0]: histos[hstub].Draw('e0 x0 same')
+        else: histos[hstub].Draw('hist same')
 
-    globalmin = min([histos[key].GetMinimum(0) for key in histos if v[0] == key[:len(v[0])] and key[len(v[0]):] in [s[0] for s in samples]])
-    globalmax = min([histos[key].GetMaximum() for key in histos if v[0] == key[:len(v[0])] and key[len(v[0]):] in [s[0] for s in samples]])
+    #globalmin = min([histos[key].GetMinimum(0) for key in histos if v[0] == key[:len(v[0])] and key[len(v[0]):] in [s[0] for s in samples]])
+    #globalmax = min([histos[key].GetMaximum() for key in histos if v[0] == key[:len(v[0])] and key[len(v[0]):] in [s[0] for s in samples]])
+    
+    globalmin = histos[v[0] + samples[0][0]].GetMinimum(0)
+    globalmax = histos[v[0] + samples[0][0]].GetMaximum()
+        
+    
     logrange = ROOT.TMath.Log10(globalmax) - ROOT.TMath.Log10(globalmin)
 
     histos[v[0] + 'emptyloghist'].SetMinimum(0.5 * globalmin)
@@ -149,14 +180,15 @@ for v in variables:
 
         firstname = None
         for s in samples:
+            hstub = v[0] + s[0]
             if s[0] == 'full': continue
             if firstname is None: firstname = s[0]
             if 'test' in s[0] or 'val' in s[0]:
-                ratios[v[0] + s[0]].Draw('e0 x0 same')
-                ratios[v[0] + s[0]].Draw('hist same')
+                ratios[hstub].Draw('e0 x0 same')
+                ratios[hstub].Draw('hist same')
             else:
-                ratios[v[0] + s[0]].Draw('e0 x0 same')
-                ratios[v[0] + s[0]].Draw('hist same')
+                ratios[hstub].Draw('e0 x0 same')
+                ratios[hstub].Draw('hist same')
 
         p.adjustLowerHisto(ratios[v[0] + firstname])
         ratios[v[0] + firstname].SetMinimum(1. - v[4] + 0.0001)
@@ -174,4 +206,4 @@ for v in variables:
 
     canvas[v[0]].Update()
     canvas[v[0]].Draw()
-    canvas[v[0]].Print(nameout.replace('VARIABLE', v[0].replace('_', '').replace('CLASS', '')))
+    canvas[v[0]].Print('figs'+training_id+'/'+nameout.replace('VARIABLE', v[0].replace('_', '').replace('CLASS', '')))

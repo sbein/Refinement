@@ -5,7 +5,7 @@ import matplotlib.pyplot as plt
 
 training_id = '20240529_1'
 
-model_path = '/nfs/dust/cms/user/wolfmor/Refinement/TrainingOutput/model_refinement_regression_' + training_id + '.pt'
+model_path = '/data/dust/user/wolfmor/Refinement/TrainingOutput/model_refinement_regression_' + training_id + '.pt'
 out_path = '/afs/desy.de/user/w/wolfmor/Plots/Refinement/Training/Regression/weights_' + training_id + '.png'
 
 model = torch.jit.load(model_path)

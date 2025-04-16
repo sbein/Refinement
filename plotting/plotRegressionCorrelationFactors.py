@@ -12,7 +12,7 @@ diff = 'divide'  # 'subtract'
 
 training_id = '20231105_1'
 
-fin = ROOT.TFile('/nfs/dust/cms/user/wolfmor/Refinement/TrainingOutput/output_refinement_regression_TRAININGID.root'.replace('TRAININGID', training_id))
+fin = ROOT.TFile('/data/dust/user/wolfmor/Refinement/TrainingOutput/output_refinement_regression_TRAININGID.root'.replace('TRAININGID', training_id))
 tree = fin.Get('tJet')
 
 nameout = 'regression_correlationfactors_' + training_id + '.png'

@@ -14,41 +14,41 @@ nTest = 200  # 2
 
 # careful, the fullsimpath is actually not used!
 
-# fastsimpath = '/nfs/dust/cms/user/beinsam/FastSim/CMSSW_10_6_22/src/TTbar/Fast/*/step3_inNANOAODSIM.root'
-# fullsimpath = '/nfs/dust/cms/user/beinsam/FastSim/CMSSW_10_6_22/src/TTbar/Full/*/step3_inNANOAODSIM.root'
-# fastsimpath = '/nfs/dust/cms/user/beinsam/FastSim/CMSSW_10_6_22/src/TTbar/Fast/1105/step3_inNANOAODSIM.root'
-# fullsimpath = '/nfs/dust/cms/user/beinsam/FastSim/CMSSW_10_6_22/src/TTbar/Full/1105/step3_inNANOAODSIM.root'
-# fastsimpath = '/nfs/dust/cms/user/beinsam/FastSim/CMSSW_10_6_22/src/Dijet600_800/Fast/*/*inNANOAODSIM.root'
-# fullsimpath = '/nfs/dust/cms/user/beinsam/FastSim/CMSSW_10_6_22/src/Dijet600_800/Full/*/*inNANOAODSIM.root'
+# fastsimpath = '/data/dust/user/beinsam/FastSim/CMSSW_10_6_22/src/TTbar/Fast/*/step3_inNANOAODSIM.root'
+# fullsimpath = '/data/dust/user/beinsam/FastSim/CMSSW_10_6_22/src/TTbar/Full/*/step3_inNANOAODSIM.root'
+# fastsimpath = '/data/dust/user/beinsam/FastSim/CMSSW_10_6_22/src/TTbar/Fast/1105/step3_inNANOAODSIM.root'
+# fullsimpath = '/data/dust/user/beinsam/FastSim/CMSSW_10_6_22/src/TTbar/Full/1105/step3_inNANOAODSIM.root'
+# fastsimpath = '/data/dust/user/beinsam/FastSim/CMSSW_10_6_22/src/Dijet600_800/Fast/*/*inNANOAODSIM.root'
+# fullsimpath = '/data/dust/user/beinsam/FastSim/CMSSW_10_6_22/src/Dijet600_800/Full/*/*inNANOAODSIM.root'
 
-# fastsimpath = '/nfs/dust/cms/user/beinsam/FastSim/VisitCaloResponse/CMSSW_12_2_3/src/T1tttt/Fast/*/*NANO*.root'
-# fastsimpath = '/nfs/dust/cms/user/beinsam/FastSim/VisitCaloResponse/CMSSW_12_2_3/src/T1tttt/FastGenDecays/*/step3_inNANOAODSIM.root'
-# fullsimpath = '/nfs/dust/cms/user/beinsam/FastSim/VisitCaloResponse/CMSSW_12_2_3/src/T1tttt/Full/*/step3_inNANOAODSIM.root'
+# fastsimpath = '/data/dust/user/beinsam/FastSim/VisitCaloResponse/CMSSW_12_2_3/src/T1tttt/Fast/*/*NANO*.root'
+# fastsimpath = '/data/dust/user/beinsam/FastSim/VisitCaloResponse/CMSSW_12_2_3/src/T1tttt/FastGenDecays/*/step3_inNANOAODSIM.root'
+# fullsimpath = '/data/dust/user/beinsam/FastSim/VisitCaloResponse/CMSSW_12_2_3/src/T1tttt/Full/*/step3_inNANOAODSIM.root'
 
-# fastsimpath = '/nfs/dust/cms/user/beinsam/FastSim/VisitCaloResponse/CMSSW_12_2_3/src/TTbar/FastGenDecays/*/step3_inNANOAODSIM.root'
-# fullsimpath = '/nfs/dust/cms/user/beinsam/FastSim/VisitCaloResponse/CMSSW_12_2_3/src/TTbar/Full/*/step3_inNANOAODSIM.root'
+# fastsimpath = '/data/dust/user/beinsam/FastSim/VisitCaloResponse/CMSSW_12_2_3/src/TTbar/FastGenDecays/*/step3_inNANOAODSIM.root'
+# fullsimpath = '/data/dust/user/beinsam/FastSim/VisitCaloResponse/CMSSW_12_2_3/src/TTbar/Full/*/step3_inNANOAODSIM.root'
 
-# fastsimpath = '/nfs/dust/cms/user/beinsam/FastSim/VisitCaloResponse/CMSSW_12_2_3/src/TTbar/Fast/*/*NANO*.root'
-# fullsimpath = '/nfs/dust/cms/user/beinsam/FastSim/VisitCaloResponse/CMSSW_12_2_3/src/TTbar/Fast/*/*NANO*.root'
+# fastsimpath = '/data/dust/user/beinsam/FastSim/VisitCaloResponse/CMSSW_12_2_3/src/TTbar/Fast/*/*NANO*.root'
+# fullsimpath = '/data/dust/user/beinsam/FastSim/VisitCaloResponse/CMSSW_12_2_3/src/TTbar/Fast/*/*NANO*.root'
 
 # run 3
-# fastsimpath = '/nfs/dust/cms/user/beinsam/FastSim/Refinement/CMSSW_12_6_0/src/TTbar/Fast/*/step2_SIM_RECOBEFMIX_DIGI_L1_DIGI2RAW_L1Reco_RECO_PAT_NANO.root'
-# fullsimpath = '/nfs/dust/cms/user/beinsam/FastSim/Refinement/CMSSW_12_4_11_patch3/src/TTbar/Full/*/step3_NANO.root'
-# fullsimpath = '/nfs/dust/cms/user/beinsam/FastSim/Refinement/CMSSW_12_6_0/src/TTbar/Full/*/*NANO.root'
+# fastsimpath = '/data/dust/user/beinsam/FastSim/Refinement/CMSSW_12_6_0/src/TTbar/Fast/*/step2_SIM_RECOBEFMIX_DIGI_L1_DIGI2RAW_L1Reco_RECO_PAT_NANO.root'
+# fullsimpath = '/data/dust/user/beinsam/FastSim/Refinement/CMSSW_12_4_11_patch3/src/TTbar/Full/*/step3_NANO.root'
+# fullsimpath = '/data/dust/user/beinsam/FastSim/Refinement/CMSSW_12_6_0/src/TTbar/Full/*/*NANO.root'
 
-# fastsimpath = '/nfs/dust/cms/user/beinsam/FastSim/Refinement/Backport2Decayer/CMSSW_10_6_X_2023-04-23-0000/src/TTbar/Fast/*/TTbar_13TeV_TuneCUETP8M1_cfi_GEN_SIM_RECOBEFMIX_DIGI_L1_DIGI2RAW_L1Reco_RECO_PAT_NANO.root'
+# fastsimpath = '/data/dust/user/beinsam/FastSim/Refinement/Backport2Decayer/CMSSW_10_6_X_2023-04-23-0000/src/TTbar/Fast/*/TTbar_13TeV_TuneCUETP8M1_cfi_GEN_SIM_RECOBEFMIX_DIGI_L1_DIGI2RAW_L1Reco_RECO_PAT_NANO.root'
 # fullsimmodifier = lambda x: x.replace('/Fast/', '/Full/').replace('TTbar_13TeV_TuneCUETP8M1_cfi_GEN_SIM_RECOBEFMIX_DIGI_L1_DIGI2RAW_L1Reco_RECO_PAT_NANO.root', 'step3_inNANOAODSIM.root')
 
-# fastsimpath = '/nfs/dust/cms/user/beinsam/FastSim/Refinement/Backport2Decayer/CMSSW_10_6_X_2023-04-23-0000/src/T1tttt/FastNoRefine/*/SMS-T1tttt_mGl-1500_mLSP-100_13TeV-pythia8_cfi_GEN_SIM_RECOBEFMIX_DIGI_L1_DIGI2RAW_L1Reco_RECO_PAT_NANO.root'
+# fastsimpath = '/data/dust/user/beinsam/FastSim/Refinement/Backport2Decayer/CMSSW_10_6_X_2023-04-23-0000/src/T1tttt/FastNoRefine/*/SMS-T1tttt_mGl-1500_mLSP-100_13TeV-pythia8_cfi_GEN_SIM_RECOBEFMIX_DIGI_L1_DIGI2RAW_L1Reco_RECO_PAT_NANO.root'
 # fullsimmodifier = lambda x: x.replace('/FastNoRefine/', '/Full/').replace('SMS-T1tttt_mGl-1500_mLSP-100_13TeV-pythia8_cfi_GEN_SIM_RECOBEFMIX_DIGI_L1_DIGI2RAW_L1Reco_RECO_PAT_NANO.root', 'step3_inNANOAODSIM.root')
 
-fastsimpath = '/nfs/dust/cms/user/beinsam/FastSim/Refinement/TrainingSamples/CMSSW_13_0_13/src/TTbarRun3/Fast/*/*NANO.root'
+fastsimpath = '/data/dust/user/beinsam/FastSim/Refinement/TrainingSamples/CMSSW_13_0_13/src/TTbarRun3/Fast/*/*NANO.root'
 fullsimmodifier = lambda x: x.replace('/Fast/', '/Full/').replace('step2_SIM_RECOBEFMIX_DIGI_L1_DIGI2RAW_L1Reco_RECO_PAT_NANO.root', 'step2_PAT_NANO.root')
 
-fastsimpath = '/nfs/dust/cms/user/beinsam/FastSim/Refinement/TrainingSamples/CMSSW_13_0_13/src/T1ttttRun3/Fast/*/*NANO.root'
+fastsimpath = '/data/dust/user/beinsam/FastSim/Refinement/TrainingSamples/CMSSW_13_0_13/src/T1ttttRun3/Fast/*/*NANO.root'
 fullsimmodifier = lambda x: x.replace('/Fast/', '/Full/').replace('step2_SIM_RECOBEFMIX_DIGI_L1_DIGI2RAW_L1Reco_RECO_PAT_NANO.root', 'step2_PAT_NANO.root')
 
-fastsimpath = '/nfs/dust/cms/user/beinsam/FastSim/Refinement/TrainingSamples/CMSSW_14_0_12/src/T1ttttRun3PU/Fast/*/step2_SIM_RECOBEFMIX_DIGI_L1_DIGI2RAW_L1Reco_RECO_PAT_NANO_PU.root'
+fastsimpath = '/data/dust/user/beinsam/FastSim/Refinement/TrainingSamples/CMSSW_14_0_12/src/T1ttttRun3PU/Fast/*/step2_SIM_RECOBEFMIX_DIGI_L1_DIGI2RAW_L1Reco_RECO_PAT_NANO_PU.root'
 fullsimmodifier = lambda x: x.replace('/Fast/', '/Full/').replace('step2_SIM_RECOBEFMIX_DIGI_L1_DIGI2RAW_L1Reco_RECO_PAT_NANO_PU.root', 'NANOAODSIM.root')
 
 # if isTest:
@@ -124,8 +124,8 @@ addrecfatjetvars = [
 cmsswversion = fastsimlist[0].split('/')[-6]
 process = fastsimlist[0].split('/')[-4]
 innstub = fastsimlist[0].split('/')[-1].replace('.root', '')
-if isTest: outname = '/nfs/dust/cms/user/wolfmor/Refinement/littletree_' + cmsswversion + '_' + process + '_' + innstub + '_coffea_PUPPI_new_test.root'
-else: outname = '/nfs/dust/cms/user/wolfmor/Refinement/littletree_' + cmsswversion + '_' + process + '_' + innstub + '_coffea_PUPPI_new.root'
+if isTest: outname = '/data/dust/user/wolfmor/Refinement/littletree_' + cmsswversion + '_' + process + '_' + innstub + '_coffea_PUPPI_new_test.root'
+else: outname = '/data/dust/user/wolfmor/Refinement/littletree_' + cmsswversion + '_' + process + '_' + innstub + '_coffea_PUPPI_new.root'
 
 
 def main():

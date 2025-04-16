@@ -49,7 +49,7 @@ samples = [
 ]
 
 # specify the input and output
-in_path = '/nfs/dust/cms/user/wolfmor/Refinement/TrainingOutput/traininglog_refinement_regression_TRAININGID_' + trainorval + '.csv'
+in_path = '/data/dust/user/wolfmor/Refinement/TrainingOutput/traininglog_refinement_regression_TRAININGID_' + trainorval + '.csv'
 
 nameout = 'pareto_' + samples[0][1] + '_' + trainorval + '.png'
 if iszoom:
