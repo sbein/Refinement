@@ -1,0 +1,5 @@
+executable = /bin/bash
+Request_GPUs = 1
+request_memory = 64000
++RequestRuntime = 3600 * 12
+queue 1
