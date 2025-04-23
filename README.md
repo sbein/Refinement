@@ -6,6 +6,7 @@ source /cvmfs/sft.cern.ch/lcg/views/LCG_106_cuda/x86_64-el9-gcc11-opt/setup.sh
 
 This is the current sequence I use to do a training and produce plots on the website:
 
+```
 screen
 condor_submit -i big.submit
 source /afs/desy.de/user/b/beinsam/.bash_profile
@@ -23,3 +24,4 @@ rm -rf /afs/desy.de/user/b/beinsam/www/FastSim/Refinement/Jets/figs18April2025lo
 cp -r figs18April2025lowlr /afs/desy.de/user/b/beinsam/www/FastSim/Refinement/Jets
 python /afs/desy.de/user/b/beinsam/www/templates/dir_indexer.py /afs/desy.de/user/b/beinsam/www/FastSim/Refinement/Jets -r -t /afs/desy.de/user/b/beinsam/www/templates/default.html && python /afs/desy.de/user/b/beinsam/www/templates/bigindexer.py /afs/desy.de/user/b/beinsam/www/FastSim/Refinement/Jets/
 cp ../18April2025lowlr/* /afs/desy.de/user/b/beinsam/www/FastSim/Refinement/Jets/18April2025lowlr/
+```
