@@ -1,5 +1,4 @@
 """
-
 #first 
 screen
 condor_submit -i big1.submit 
@@ -18,20 +17,6 @@ rm -rf /afs/desy.de/user/b/beinsam/www/FastSim/Refinement/Jets/figs18April2025lo
 cp -r figs18April2025lowlr_ext /afs/desy.de/user/b/beinsam/www/FastSim/Refinement/Jets
 python /afs/desy.de/user/b/beinsam/www/templates/dir_indexer.py /afs/desy.de/user/b/beinsam/www/FastSim/Refinement/Jets -r -t /afs/desy.de/user/b/beinsam/www/templates/default.html && python /afs/desy.de/user/b/beinsam/www/templates/bigindexer.py /afs/desy.de/user/b/beinsam/www/FastSim/Refinement/Jets/
 cp ../18April2025lowlr_ext/* /afs/desy.de/user/b/beinsam/www/FastSim/Refinement/Jets/18April2025lowlr_ext/
-
-#or
-mkdir 20April2025highlr7sb_ext && cp trainRegression_Jet.py my*.py 20April2025highlr7sb_ext/
-python trainRegression_Jet.py 20April2025highlr7sb_ext 2>&1 | tee traininglog_regressionJetWithClassifier.txt
-cd plotting
-python plotLearningCurves.py 20April2025highlr7sb_ext
-python plotRegression1D.py 20April2025highlr7sb_ext
-python cropPNGlinlog.py "figs*/reg*.png"
-find figs*/ -type f -name 'reg*.png' \! -name '*log.png*' -exec rm {} + && rm fig*/*{mmdfixsigma_output,mse_input_output}*
-python plotRegressionCorrelationFactors.py 20April2025highlr7sb_ext
-rm -rf /afs/desy.de/user/b/beinsam/www/FastSim/Refinement/Jets/figs20April2025highlr7sb_ext*
-cp -r figs20April2025highlr7sb_ext /afs/desy.de/user/b/beinsam/www/FastSim/Refinement/Jets
-python /afs/desy.de/user/b/beinsam/www/templates/dir_indexer.py /afs/desy.de/user/b/beinsam/www/FastSim/Refinement/Jets -r -t /afs/desy.de/user/b/beinsam/www/templates/default.html && python /afs/desy.de/user/b/beinsam/www/templates/bigindexer.py /afs/desy.de/user/b/beinsam/www/FastSim/Refinement/Jets/
-cp ../20April2025highlr7sb_ext/* /afs/desy.de/user/b/beinsam/www/FastSim/Refinement/Jets/figs20April2025highlr7sb_ext/
 """
 
 import os, sys
@@ -48,7 +33,7 @@ import my_mmd
 import my_mdmm
 from my_modules import *
 
-doSingleStage = True
+doSingleStage = False
 is_test = False
 
 try: training_id = sys.argv[1]
