@@ -1,8 +1,8 @@
 #! /usr/bin/env python
 
-
 import ROOT
 from plotting import Plotting
+import sys
 
 rightmargin = 0.19
 zaxistitleoffset = 1.1
@@ -10,12 +10,20 @@ zaxistitleoffset = 1.1
 onlyupperhalf = True
 diff = 'divide'  # 'subtract'
 
-training_id = '20231105_1'
+try: training_id = sys.argv[1]
+except: 
+    training_id = '7April2025'
+    training_id = '20231105_1'
+    training_id = '20250407'
+    training_id = '7April2025withClassifier'
+    training_id = '7April2025'
 
-fin = ROOT.TFile('/data/dust/user/wolfmor/Refinement/TrainingOutput/output_refinement_regression_TRAININGID.root'.replace('TRAININGID', training_id))
+
+fname = '/data/dust/user/beinsam/FastSim/Refinement/Regress/TrainingOutput/output_refinement_regression_TRAININGID.root'
+fin = ROOT.TFile(fname.replace('TRAININGID', training_id))
 tree = fin.Get('tJet')
 
-nameout = 'regression_correlationfactors_' + training_id + '.png'
+nameout = 'regcfs.png'
 
 # (name, suffix, label)
 samples = [
@@ -24,14 +32,17 @@ samples = [
     ('refined', 'Refined', 'FastSim Refined'),
 ]
 
-# (name/title, branch name, (nbins, xlow, xhigh))
 variables = [
     ('GEN p_{T}', 'GenJet_pt', (100, 0., 2000)),
     ('p_{T}', 'RecJet_pt_CLASSNOTREFINED', (100, 0., 1000)),
-    ('B', 'RecJet_btagDeepFlavB_CLASS', (120, -0.1, 1.1)),
-    ('CvB', 'RecJet_btagDeepFlavCvB_CLASS', (120, -0.1, 1.1)),
-    ('CvL', 'RecJet_btagDeepFlavCvL_CLASS', (120, -0.1, 1.1)),
-    ('QG', 'RecJet_btagDeepFlavQG_CLASS', (120, -0.1, 1.1)),
+    ('D B', 'RecJet_btagDeepFlavB_CLASS', (120, -0.1, 1.1)),
+    ('D CvB', 'RecJet_btagDeepFlavCvB_CLASS', (120, -0.1, 1.1)),
+    ('D CvL', 'RecJet_btagDeepFlavCvL_CLASS', (120, -0.1, 1.1)),
+    ('D QG', 'RecJet_btagDeepFlavQG_CLASS', (120, -0.1, 1.1)),
+    ('U B', 'RecJet_btagUParTAK4B_CLASS', (120, -0.1, 1.1)),
+    ('U CvB', 'RecJet_btagUParTAK4CvB_CLASS', (120, -0.1, 1.1)),
+    ('U CvL', 'RecJet_btagUParTAK4CvL_CLASS', (120, -0.1, 1.1)),
+    ('U QG', 'RecJet_btagUParTAK4QvG_CLASS', (120, -0.1, 1.1)),    
 ]
 numvars = len(variables)
 
@@ -139,7 +150,7 @@ for ipad, s in enumerate(samples):
     histos[s[0]].GetZaxis().SetRangeUser(-1., 1.)
     histos[s[0]].SetMarkerSize(2.)
 
-    histos[s[0]].Draw('text colz')
+    histos[s[0]].Draw('colz')
 
     histos[s[0] + 'white'].SetMarkerSize(2.)
     histos[s[0] + 'white'].SetMarkerColor(ROOT.kWhite)
@@ -147,6 +158,8 @@ for ipad, s in enumerate(samples):
 
     p.postparePad()
 
+lilcanv = ROOT.TCanvas('clil', 'clil', width, height)
+lilcanv.Divide(1,1)
 for ipad, s in enumerate(samples):
 
     canvas.cd(ipad+1+len(samples))
@@ -164,7 +177,7 @@ for ipad, s in enumerate(samples):
     ROOT.gStyle.SetPalette(ROOT.kGreenPink)
     ROOT.gStyle.SetNumberContours(101)
     ROOT.gStyle.SetPaintTextFormat('4.' + str(ndigits) + 'f')
-
+    
     p.preparePad()
 
     ROOT.gPad.SetRightMargin(rightmargin)
@@ -178,13 +191,40 @@ for ipad, s in enumerate(samples):
     histos[s[0] + 'diffFull'].SetMarkerSize(2.)
 
     histos[s[0] + 'diffFull'].Draw('text colz')
-
     histos[s[0] + 'diffFull' + 'white'].SetMarkerSize(2.)
     histos[s[0] + 'diffFull' + 'white'].SetMarkerColor(ROOT.kWhite)
     histos[s[0] + 'diffFull' + 'white'].Draw('text same')
-
     p.postparePad()
+    if ipad in [1,2]:
+        lilcanv.cd()
+            
+        p = Plotting(
+            text='(13 TeV)',
+            extratext='  Simulation',
+            H_ref=height,
+            W_ref=width,
+            iPos=0
+        )
+        p.setStyle()
+    
+        ROOT.gStyle.SetPalette(ROOT.kGreenPink)
+        ROOT.gStyle.SetNumberContours(101)
+        ROOT.gStyle.SetPaintTextFormat('4.' + str(ndigits) + 'f')
+        
+        p.preparePad()
+    
+        ROOT.gPad.SetRightMargin(rightmargin)        
+        histos[s[0] + 'diffFull'].Draw('text colz')
+        histos[s[0] + 'diffFull' + 'white'].SetMarkerSize(2.)
+        histos[s[0] + 'diffFull' + 'white'].SetMarkerColor(ROOT.kWhite)
+        histos[s[0] + 'diffFull' + 'white'].Draw('text same') 
+        lilcanv.Update()
+        if ipad==1: lilcanv.Print('figs'+training_id+'/zfastPearsonRes.png')
+        if ipad==2: lilcanv.Print('figs'+training_id+'/zrefinedFastPearsonRes.png')   
+        p.postparePad()     
 
-canvas.Update()
-canvas.Draw()
-canvas.Print(nameout)
+#canvas.Update()
+#canvas.Draw()
+#canvas.Print('figs'+training_id+'/'+nameout)
+
+

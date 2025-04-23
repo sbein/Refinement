@@ -6,34 +6,40 @@ condor_submit -i big1.submit
 source /afs/desy.de/user/b/beinsam/.bash_profile
 cd /data/dust/user/beinsam/FastSim/Refinement/Regress
 source /cvmfs/sft.cern.ch/lcg/views/LCG_106_cuda/x86_64-el9-gcc11-opt/setup.sh
-python trainRegression_Jet.py 16April2025 2>&1 | tee traininglog_regressionJet.txt
-#or
-python trainRegression_Jet.py 16April2025withClassifier 2>&1 | tee traininglog_regressionJetWithClassifier.txt
+mkdir 18April2025lowlr_ext && cp trainRegression_Jet.py my*.py 18April2025lowlr_ext/
+python trainRegression_Jet.py 18April2025lowlr_ext 2>&1 | tee traininglog_regressionJethighlr.txt
 cd plotting
-python plotLearningCurves.py 15April2025 &
-python plotRegression1D.py 15April2025
-python plotLearningCurves.py 15April2025withClassifier
-python plotRegression1D.py 15April2025withClassifier
+python plotLearningCurves.py 18April2025lowlr_ext &
+python plotRegression1D.py 18April2025lowlr_ext
 python cropPNGlinlog.py "figs*/reg*.png"
 find figs*/ -type f -name 'reg*.png' \! -name '*log.png*' -exec rm {} + && rm fig*/*{mmdfixsigma_output,mse_input_output}*
-rm -rf /afs/desy.de/user/b/beinsam/www/FastSim/Refinement/Jets/figs15April2025*
-cp -r figs15April2025 /afs/desy.de/user/b/beinsam/www/FastSim/Refinement/Jets
-cp -r figs15April2025withClassifier /afs/desy.de/user/b/beinsam/www/FastSim/Refinement/Jets
-python /afs/desy.de/user/b/beinsam/www/templates/dir_indexer.py /afs/desy.de/user/b/beinsam/www/FastSim/Refinement/Jets -r -t /afs/desy.de/user/b/beinsam/www/templates/default.html
-python /afs/desy.de/user/b/beinsam/www/templates/bigindexer.py /afs/desy.de/user/b/beinsam/www/FastSim/Refinement/Jets/
+python plotRegressionCorrelationFactors.py 18April2025lowlr_ext
+rm -rf /afs/desy.de/user/b/beinsam/www/FastSim/Refinement/Jets/figs18April2025lowlr_ext*
+cp -r figs18April2025lowlr_ext /afs/desy.de/user/b/beinsam/www/FastSim/Refinement/Jets
+python /afs/desy.de/user/b/beinsam/www/templates/dir_indexer.py /afs/desy.de/user/b/beinsam/www/FastSim/Refinement/Jets -r -t /afs/desy.de/user/b/beinsam/www/templates/default.html && python /afs/desy.de/user/b/beinsam/www/templates/bigindexer.py /afs/desy.de/user/b/beinsam/www/FastSim/Refinement/Jets/
+cp ../18April2025lowlr_ext/* /afs/desy.de/user/b/beinsam/www/FastSim/Refinement/Jets/18April2025lowlr_ext/
 
+#or
+mkdir 20April2025highlr7sb_ext && cp trainRegression_Jet.py my*.py 20April2025highlr7sb_ext/
+python trainRegression_Jet.py 20April2025highlr7sb_ext 2>&1 | tee traininglog_regressionJetWithClassifier.txt
+cd plotting
+python plotLearningCurves.py 20April2025highlr7sb_ext
+python plotRegression1D.py 20April2025highlr7sb_ext
+python cropPNGlinlog.py "figs*/reg*.png"
+find figs*/ -type f -name 'reg*.png' \! -name '*log.png*' -exec rm {} + && rm fig*/*{mmdfixsigma_output,mse_input_output}*
+python plotRegressionCorrelationFactors.py 20April2025highlr7sb_ext
+rm -rf /afs/desy.de/user/b/beinsam/www/FastSim/Refinement/Jets/figs20April2025highlr7sb_ext*
+cp -r figs20April2025highlr7sb_ext /afs/desy.de/user/b/beinsam/www/FastSim/Refinement/Jets
+python /afs/desy.de/user/b/beinsam/www/templates/dir_indexer.py /afs/desy.de/user/b/beinsam/www/FastSim/Refinement/Jets -r -t /afs/desy.de/user/b/beinsam/www/templates/default.html && python /afs/desy.de/user/b/beinsam/www/templates/bigindexer.py /afs/desy.de/user/b/beinsam/www/FastSim/Refinement/Jets/
+cp ../20April2025highlr7sb_ext/* /afs/desy.de/user/b/beinsam/www/FastSim/Refinement/Jets/figs20April2025highlr7sb_ext/
 """
 
 import os, sys
 import csv
 from datetime import datetime
-
 import ROOT
 import numpy as np
-import seaborn as sns
 import pandas as pd
-from matplotlib import colors
-
 import torch
 torch.set_printoptions(edgeitems=5, linewidth=160)
 device = torch.device('cuda' if torch.cuda.is_available() else 'cpu')
@@ -53,165 +59,16 @@ else: refineClassifier = False
 is_verbose = False
 
 
-def snapshot(_inp, _target, _out, _epoch, is_transformed=False, plot_kde=True):
-
-    print('snapshot!')
-
-    palette = {'Refined': 'tab:blue', 'Fast': 'tab:red', 'Full': 'tab:green'}
-
-    # iterators will be used for Fast/Full in parallel and then for Refined _or_ only for Refined
-
-    columns = [n[0].replace('_CLASS', '') for n in real_parameters + VARIABLES]
-    if _epoch == 0: columns_iter = iter([c for c in columns for _ in range(2)] + columns)
-    else: columns_iter = iter(columns)
-
-    off_diag = []
-    for iy in range(1, len(columns)):
-        for ix in range(0, iy):
-            off_diag.append((columns[ix], columns[iy]))
-    if _epoch == 0: offdiag_iter = iter([od for od in off_diag for _ in range(2)] + off_diag)
-    else: offdiag_iter = iter(off_diag)
-
-    if is_transformed:
-        transformed_bins = np.linspace(-15, 15, 7)
-        bins = {
-            'GenJet_pt': transformed_bins,
-            'GenJet_eta': np.linspace(-6, 6, 7),
-            'GenJet_hadronFlavour': np.linspace(-5, 11, 17),
-            'RecJet_hadronFlavour_FastSim': np.linspace(-5, 11, 17),
-            'RecJet_btagDeepFlavB': transformed_bins,
-            'RecJet_btagDeepFlavCvB': transformed_bins,
-            'RecJet_btagDeepFlavCvL': transformed_bins,
-            'RecJet_btagDeepFlavQG': transformed_bins,
-        }
+if bool('_ext' in training_id):
+    UseKindling = True
+    tinderfile = 'TrainingOutput/model_refinement_regression_'+training_id[:-4]+'.pt'
+    if not os.path.exists(tinderfile):
+        print("you have set kindling to True but there is no tinder file", tinderfile)
+        exit(0)
     else:
-        deepflavbins = np.linspace(-0.5, 1.5, 9)
-        bins = {
-            'GenJet_pt': np.linspace(-500, 1500, 9),
-            'GenJet_eta': np.linspace(-6, 6, 7),
-            'GenJet_hadronFlavour': np.linspace(-5, 11, 17),
-            'RecJet_hadronFlavour_FastSim': np.linspace(-5, 11, 17),
-            'RecJet_btagDeepFlavB': deepflavbins,
-            'RecJet_btagDeepFlavCvB': deepflavbins,
-            'RecJet_btagDeepFlavCvL': deepflavbins,
-            'RecJet_btagDeepFlavQG': deepflavbins,
-        }
-
-    def myhist(x, **kwargs):
-        b = bins[next(columns_iter)]
-        sns.histplot(x, bins=b, **kwargs)
-
-    def mykde(x, y, **kwargs):
-        thex, they = next(offdiag_iter)
-        c = ((bins[thex][0], bins[thex][-1]), (bins[they][0], bins[they][-1]))
-        theax = sns.kdeplot(x=x, y=y, clip=c, **kwargs)
-        theax.set_xlim((bins[thex][0], bins[thex][-1]))
-        theax.set_ylim((bins[they][0], bins[they][-1]))
-
-
-    if _epoch == 0:
-
-        globals()['snapshot_parameters' + str(is_transformed)] = _inp[:, :real_len_parameters]
-
-        # add parameters to Full list
-        _target = torch.cat((globals()['snapshot_parameters' + str(is_transformed)], _target), axis=1)
-
-        dataXy = torch.cat((_inp, _target)).cpu().numpy()
-        categoriesXy = ['Fast'] * _inp.shape[0] + ['Full'] * _target.shape[0]
-        dfXy = pd.DataFrame({n[0].replace('_CLASS', ''): dataXy[:, idim] for idim, n in enumerate(real_parameters + VARIABLES)})
-        dfXy['Category'] = categoriesXy
-
-        globals()['snapshot_g' + str(is_transformed)] = sns.PairGrid(dfXy, vars=columns, hue='Category', palette=palette, diag_sharey=False)
-
-        globals()['snapshot_g' + str(is_transformed)].map_diag(myhist, fill=False, element='bars')
-        globals()['snapshot_g' + str(is_transformed)].map_upper(sns.scatterplot)
-        if plot_kde: globals()['snapshot_g' + str(is_transformed)].map_lower(mykde, levels=[1-0.997, 1-0.955, 1-0.683])
-
-
-    # ... and then add Refined:
-
-    # add parameters to Refined list
-    _out = torch.cat((globals()['snapshot_parameters' + str(is_transformed)], _out), axis=1)
-
-    dataOutput = _out.cpu().numpy()
-    categoriesOutput = ['Refined'] * _out.shape[0]
-    dfOutput = pd.DataFrame({n[0].replace('_CLASS', ''): dataOutput[:, idim] for idim, n in enumerate(real_parameters + VARIABLES)})
-    dfOutput['Category'] = categoriesOutput
-
-
-    # update PairGrid object
-    g = globals()['snapshot_g' + str(is_transformed)]
-
-    # remove Refined figs
-    if _epoch > 0:
-        for ax in g.figure.axes:
-
-            # to remove histogram
-            for patch in ax.patches:
-                if patch.get_edgecolor() == colors.to_rgba(palette['Refined']):
-                    patch.set_visible(False)
-
-            # to remove contours and scatter figs
-            for collection in ax.collections:
-                facecolors = collection.get_facecolor()
-                edgecolors = collection.get_edgecolor()
-                for color in [facecolors, edgecolors]:
-                    if len(color) > 0:
-                        if tuple(color[0]) == colors.to_rgba(palette['Refined']):
-                            collection.set_visible(False)
-                    else:
-                        if tuple(color) == colors.to_rgba(palette['Refined']):
-                            collection.set_visible(False)
-
-    g.data = dfOutput
-    g.hue_names = ['Refined']
-    g._hue_order = ['Refined']
-    g.hue_vals = dfOutput['Category']
-    g.palette = g._get_palette(dfOutput, 'Category', ['Refined'], palette)
-
-    g.map_diag(myhist, fill=False, element='bars')
-    g.map_upper(sns.scatterplot)
-    if plot_kde: g.map_lower(mykde, levels=[1-0.997, 1-0.955, 1-0.683])
-
-
-    g.figure.set_size_inches(15, 15)
-    if g.legend:
-        g.legend.remove()
-    g.add_legend(title='Epoch ' + str(_epoch))
-
-
-    # ----------------------------------------------
-
-    if not os.path.exists(snapshot_out_path):
-        os.makedirs(snapshot_out_path)
-
-    outname = training_id
-    if is_transformed: outname += '_transformed'
-    outname += '_epoch_' + str(_epoch)
-
-    g.savefig(snapshot_out_path + '/' + outname + '.png')
-
-
-'''
-# ##### ##### #####
-# general settings
-# ##### ##### #####
-'''
-
-###sb##training_id = datetime.today().strftime('%Y%m%d') + ''  # will be used as an identifier in the output filenames, adapt if needed
-
-
-save_snapshots = False  # save snapshot figs to monitor training progress
-snapshot_out_path = 'Snapshots/' + training_id  # where to save the snapshots
-snapshot_num_batches = 4  # how many batches to use for each snapshot
-snapshot_everyXepoch = 9  # how many snapshots to save
-snapshot_plot_kde = True
-# snapshots with kde take quite some time due to kde analysis for the correlation figs...
-# roughly ~60s for batches with 1024 jets Fast/Full/Refined (~25s for only Refined)
-# scales quite linearly with number of jets
-# e.g. for 10 batches w/ 1024 jets and 10 epochs/snapshots: 1 * 10*60s + 9 * 10*25 = 2,850s = 47.5min = 0.8h
-# e.g. for 10 batches w/ 1024 jets and 100 epochs/snapshots: 1 * 10*60s + 99 * 10*25 = 25,350s = 422.5min = 7h
-# e.g. for 100 batches w/ 1024 jets and 10 epochs/snapshots: 1 * 100*60s + 9 * 100*25 = 28,500s = 475min = 8h
+        print('detected tinderfile', tinderfile)
+else: 
+    UseKindling = False
 
 
 '''
@@ -222,7 +79,7 @@ snapshot_plot_kde = True
 
 # the input file is expected to contain a tree filled with jet triplets: RecJet_x_FastSim, RecJet_x_FullSim, GenJet_y,...
 #in_path = '/data/dust/user/wolfmor/Refinement/littletree_CMSSW_14_0_12_T1ttttRun3PU_step2_SIM_RECOBEFMIX_DIGI_L1_DIGI2RAW_L1Reco_RECO_PAT_NANO_PU_coffea_PUPPI.root'
-in_path = '/data/dust/user/beinsam/FastSim/Refinement/Classify/littletree_CMSSW_14_0_12_T1ttttRun3PU_step2_SIM_RECOBEFMIX_DIGI_L1_DIGI2RAW_L1Reco_RECO_PAT_NANO_PU_coffea_PUPPI_withClassifier.root'
+in_path = '/data/dust/user/beinsam/FastSim/Refinement/Regress/Classify/littletree_CMSSW_14_0_12_T1ttttRun3PU_step2_SIM_RECOBEFMIX_DIGI_L1_DIGI2RAW_L1Reco_RECO_PAT_NANO_PU_coffea_PUPPI_withClassifier.root'
 
 in_tree = 'tJet'
 preselection = 'GenJet_nearest_dR>0.5&&RecJet_nearest_dR_FastSim>0.5&&RecJet_nearest_dR_FullSim>0.5' \
@@ -240,10 +97,12 @@ out_path = out_dir+'output_refinement_regression_' + training_id + '.root'
 onnxcompatible = True
 
 num_skipblocks = 5
+#num_skipblocks = 7
 #num_skipblocks = 2#sb
-#num_layers_per_skipblock = 2
-num_layers_per_skipblock = 3
-nodes_hidden_layer = 1024
+num_layers_per_skipblock = 2
+#num_layers_per_skipblock = 3##bad!
+#nodes_hidden_layer = 1024
+nodes_hidden_layer = 256
 if is_test: nodes_hidden_layer = 256#sb
 
 dropout = 0.2
@@ -267,12 +126,13 @@ logitfactor = 1.
 if is_test: 
     num_epochs = 1000
 else: 
-    num_epochs = 100
     num_epochs = 200
     num_epochs = 1000    
-
-learning_rate = 1e-5
+    #num_epochs = 20
+    
+learning_rate = 1e-5#lowest and best so far, could try lower 
 #learning_rate = 1e-4
+#learning_rate = 3e-4
 
 lr_scheduler_gamma = False  # 1.
 cyclic_lr = False  # (base_lr, max_lr, step_size_up)
@@ -289,11 +149,6 @@ if is_test:
     #num_batches = [100, 100, 100]
 else: 
     num_batches = [500, 100, 200]
-    #num_batches = [100, 20, 40]#SB
-    #num_batches = [10, 10, 10]#SB    
-    #num_batches = [6, 6, 6]    #worked at least with 256 nodes/layer
-    #num_batches = [5, 5, 5]    
-    #num_batches = [3, 3, 3]     
 
 '''
 # ##### ##### ##### ##### ##### ##### #####
@@ -325,6 +180,7 @@ VARIABLES = [
 if refineClassifier: VARIABLES.append(('RecJet_ffClassifier_CLASS', ['logit']))
 
 spectators_raw = [
+    'EventID',
     'GenJet_pt',
     'GenJet_eta',
     'GenJet_phi',
@@ -579,6 +435,10 @@ if castto16bit:
 #     n_resblocks=num_skipblocks-1
 # )
 
+
+if UseKindling:
+    scripted = torch.jit.load(tinderfile, map_location=device)
+    model.load_state_dict(scripted.state_dict())
 model.to(device)
 
 print(model)
@@ -618,27 +478,6 @@ loss_fns = {
                                                                if onehotencode else inp_[:, :len(PARAMETERS)])
                                                    if includeparametersinmmd else None),
 
-    # 'mmdfixsigma_output_target_hadflav0':
-    #     lambda inp_, out_, target_: mmdfixsigma_fn(out_, target_,
-    #                                                 parameters=(OneHotEncode(source_idx=onehotencode[2], target_vals=onehotencode[1]).forward(inp_)[:, :len(PARAMETERS)]
-    #                                                             if onehotencode else inp_[:, :len(PARAMETERS)])
-    #                                                 if includeparametersinmmd else None,
-    #                                                 mask=inp_[:, hadronFlavourIndex] == 0),
-
-    # 'mmdfixsigma_output_target_hadflav4':
-    #     lambda inp_, out_, target_: mmdfixsigma_fn(out_, target_,
-    #                                                 parameters=(OneHotEncode(source_idx=onehotencode[2], target_vals=onehotencode[1]).forward(inp_)[:, :len(PARAMETERS)]
-    #                                                             if onehotencode else inp_[:, :len(PARAMETERS)])
-    #                                                 if includeparametersinmmd else None,
-    #                                                 mask=inp_[:, hadronFlavourIndex] == 4),
-
-    # 'mmdfixsigma_output_target_hadflav5':
-    #     lambda inp_, out_, target_: mmdfixsigma_fn(out_, target_,
-    #                                                 parameters=(OneHotEncode(source_idx=onehotencode[2], target_vals=onehotencode[1]).forward(inp_)[:, :len(PARAMETERS)]
-    #                                                             if onehotencode else inp_[:, :len(PARAMETERS)])
-    #                                                 if includeparametersinmmd else None,
-    #                                                 mask=inp_[:, hadronFlavourIndex] == 5),
-
     'mmdfixsigma_output_target_hadflavSum':
         lambda inp_, out_, target_: hadflav_fraction_0 * mmdfixsigma_fn(out_, target_,
                                                                         parameters=(OneHotEncode(source_idx=onehotencode[2], target_vals=onehotencode[1]).forward(inp_)[:, :len(PARAMETERS)]
@@ -661,27 +500,6 @@ loss_fns = {
                                            parameters=(OneHotEncode(source_idx=onehotencode[2], target_vals=onehotencode[1]).forward(inp_)[:, :len(PARAMETERS)]
                                                        if onehotencode else inp_[:, :len(PARAMETERS)])
                                            if includeparametersinmmd else None),
-
-    # 'mmd_output_target_hadflav0':
-    #     lambda inp_, out_, target_: mmd_fn(out_, target_,
-    #                                        parameters=(OneHotEncode(source_idx=onehotencode[2], target_vals=onehotencode[1]).forward(inp_)[:, :len(PARAMETERS)]
-    #                                                    if onehotencode else inp_[:, :len(PARAMETERS)])
-    #                                        if includeparametersinmmd else None,
-    #                                        mask=inp_[:, hadronFlavourIndex] == 0),
-
-    # 'mmd_output_target_hadflav4':
-    #     lambda inp_, out_, target_: mmd_fn(out_, target_,
-    #                                        parameters=(OneHotEncode(source_idx=onehotencode[2], target_vals=onehotencode[1]).forward(inp_)[:, :len(PARAMETERS)]
-    #                                                    if onehotencode else inp_[:, :len(PARAMETERS)])
-    #                                        if includeparametersinmmd else None,
-    #                                        mask=inp_[:, hadronFlavourIndex] == 4),
-
-    # 'mmd_output_target_hadflav5':
-    #     lambda inp_, out_, target_: mmd_fn(out_, target_,
-    #                                        parameters=(OneHotEncode(source_idx=onehotencode[2], target_vals=onehotencode[1]).forward(inp_)[:, :len(PARAMETERS)]
-    #                                                    if onehotencode else inp_[:, :len(PARAMETERS)])
-    #                                        if includeparametersinmmd else None,
-    #                                        mask=inp_[:, hadronFlavourIndex] == 5),
 
     'mmd_output_target_hadflavSum':
         lambda inp_, out_, target_: hadflav_fraction_0 * mmd_fn(out_, target_,
@@ -902,51 +720,6 @@ for epoch in range(num_epochs):
         print(', '.join([str(start_points_train[loss]) for loss in loss_fns]))
         print('')
 
-        if save_snapshots:
-            
-            model.eval()
-            with torch.no_grad():
-                
-                for batch, (inp, target, spectators) in enumerate(validation_loader):
-
-                    if batch >= snapshot_num_batches: break
-
-                    out = model(inp)
-
-                    if batch == 0:
-                        inp_list = inp
-                        target_list = target
-                        out_list = out
-                    else:
-                        inp_list = torch.cat((inp_list, inp))
-                        target_list = torch.cat((target_list, target))
-                        out_list = torch.cat((out_list, out))
-
-                    if any(tanh200maskWithParameters):
-                        inp = TanhTransform(mask=tanh200maskWithParameters, norm=200).forward(inp)
-                    if any(tanh200maskWithoutParameters):
-                        target = TanhTransform(mask=tanh200maskWithoutParameters, norm=200).forward(target)
-                        out = TanhTransform(mask=tanh200maskWithoutParameters, norm=200).forward(out)
-
-                    if any(logitmaskWithParameters):
-                        inp = LogitTransform(mask=logitmaskWithParameters, factor=logitfactor, onnxcompatible=False, eps=epsilon, tiny=tiny).forward(inp)
-                    if any(logitmaskWithoutParameters):
-                        target = LogitTransform(mask=logitmaskWithoutParameters, factor=logitfactor, onnxcompatible=False, eps=epsilon, tiny=tiny).forward(target)
-                        out = LogitTransform(mask=logitmaskWithoutParameters, factor=logitfactor, onnxcompatible=False, eps=epsilon, tiny=tiny).forward(out)
-
-                    if batch == 0:
-                        inp_list_transformed = inp
-                        target_list_transformed = target
-                        out_list_transformed = out
-                    else:
-                        inp_list_transformed = torch.cat((inp_list_transformed, inp))
-                        target_list_transformed = torch.cat((target_list_transformed, target))
-                        out_list_transformed = torch.cat((out_list_transformed, out))
-
-                snapshot(inp_list, target_list, out_list, epoch, is_transformed=False, plot_kde=snapshot_plot_kde)
-                snapshot(inp_list_transformed, target_list_transformed, out_list_transformed, epoch, is_transformed=True, plot_kde=snapshot_plot_kde)
-
-            model.train()
 
     if is_verbose:
         print('\ntraining loop')
@@ -1030,12 +803,6 @@ for epoch in range(num_epochs):
                 print('batch {}'.format(batch))
 
             out = model(inp)
-            
-            if save_snapshots and epoch % snapshot_everyXepoch == 0 and batch < snapshot_num_batches:
-                if batch == 0:
-                    out_list = out
-                else:
-                    out_list = torch.cat((out_list, out))
 
             if calculatelosseswithtransformedvariables:
 
@@ -1050,12 +817,6 @@ for epoch in range(num_epochs):
                 if any(logitmaskWithoutParameters):
                     target = LogitTransform(mask=logitmaskWithoutParameters, factor=logitfactor, onnxcompatible=False, eps=epsilon, tiny=tiny).forward(target)
                     out = LogitTransform(mask=logitmaskWithoutParameters, factor=logitfactor, onnxcompatible=False, eps=epsilon, tiny=tiny).forward(out)
-
-            if save_snapshots and epoch % snapshot_everyXepoch == 0 and batch < snapshot_num_batches:
-                if batch == 0:
-                    out_list_transformed = out
-                else:
-                    out_list_transformed = torch.cat((out_list_transformed, out))
 
             for loss in loss_fns:
                 if 'omniscient' in loss:
@@ -1099,10 +860,6 @@ for epoch in range(num_epochs):
                 print('validation loss {:.5f}'.format(validation_loss.item()))
 
         print('[{} / {}] validation loss: {:.10f}'.format(epoch + 1, num_epochs, epoch_validation_loss / len_validation_loader))
-
-        if save_snapshots and epoch % snapshot_everyXepoch == 0:
-            snapshot(inp_list, target_list, out_list, epoch+1, is_transformed=False, plot_kde=snapshot_plot_kde)
-            snapshot(inp_list_transformed, target_list_transformed, out_list_transformed, epoch+1, is_transformed=True, plot_kde=snapshot_plot_kde)
 
     if lr_scheduler is not None and lr_scheduler_gamma:
         lr_scheduler.step()
