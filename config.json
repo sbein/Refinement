@@ -1,0 +1,103 @@
+{
+    "inputSettings": {
+        "filePath" : "/eos/user/d/dboncukc/rootFiles/littletree_CMSSW_14_0_12_T1ttttRun3PU_step2_SIM_RECOBEFMIX_DIGI_L1_DIGI2RAW_L1Reco_RECO_PAT_NANO_PU_coffea_PUPPI.root",
+        "treeName" : "tJet",
+        "preselection" : "GenJet_nearest_dR>0.5&&RecJet_nearest_dR_FastSim>0.5&&RecJet_nearest_dR_FullSim>0.5&&RecJet_btagUParTAK4B_FastSim>0&&RecJet_btagUParTAK4B_FullSim>0"
+    },
+    "outputSettings": {
+        "outputPath" : "/eos/user/d/dboncukc/rootFiles/fstest"
+    },
+    "generalSettings": {
+        "trainingName" : "test",
+        "trainingId" : "1",
+        "gridId" : "test123"
+    },
+    "modelSettings": {
+        "onnxCompatible" : true,
+        "numSkipBlocks" : 5,
+        "numLayersPerSkipBlock" : 2,
+        "nodesHiddenLayer" : 256,
+        "dropout" : 0.2,
+        "castTo16bit" : true,
+        "addDeepJetConstraintLayer" : true
+    },
+    "trainingSettings": {
+        "batchSize" : 1024,
+        "numBatches" : [10, 10, 10],
+        "epochs" : 1000,
+        "learningRate" : 0.001,
+        "randomSeed" : 42
+    },
+    "scalers" : {
+        "tanh1200" : {
+            "norm" : 1200,
+            "type" : "tanh"
+        },
+        "tanh700" : {
+            "norm" : 700,
+            "type" : "tanh"
+        },
+        "logit" : {
+            "factor" : 1,
+            "type" : "logit"
+        },
+        "log10" : {
+            "base" : 10,
+            "eps" : 1e-6,
+            "type" : "log"
+        },
+        "log2" : {
+            "base" : 10,
+            "eps" : 1e-6,
+            "type" : "log"
+        },
+        "ohe_RecJet_hadronFlavour_FastSim" : {
+            "values" : [0, 4, 5],
+            "type" : "ohe"
+        }
+
+    },
+    "features" : {
+        "parameters" : {
+            "GenJet_pt" : ["tanh1200", "logit"],
+            "GenJet_eta" : [],
+            "RecJet_hadronFlavour_FastSim" : []
+        },
+        "variables" : {
+            "RecJet_pt_CLASS" : ["tanh1200", "logit"],
+            "RecJet_btagDeepFlavB_CLASS" : ["logit", "tanh1200"],
+            "RecJet_btagDeepFlavCvB_CLASS" : ["log10","logit", "tanh700"],
+            "RecJet_btagDeepFlavCvL_CLASS" : ["log2"],
+            "RecJet_btagDeepFlavQG_CLASS" : ["log10"],
+            "RecJet_btagUParTAK4B_CLASS" : ["log10", "logit"],
+            "RecJet_btagUParTAK4CvB_CLASS" : ["logit"],
+            "RecJet_btagUParTAK4CvL_CLASS" : ["logit"],
+            "RecJet_btagUParTAK4QvG_CLASS" : ["log2"]
+        },
+        "spectators" : [
+            "EventID",
+            "GenJet_pt",
+            "GenJet_eta",
+            "GenJet_phi",
+            "GenJet_mass",
+            "GenJet_hadronFlavour",
+            "GenJet_partonFlavour",
+            "GenJet_nearest_dR",
+            "GenJet_nearest_pt",
+            "RecJet_pt_CLASS",
+            "RecJet_eta_CLASS",
+            "RecJet_phi_CLASS",
+            "RecJet_mass_CLASS",
+            "RecJet_hadronFlavour_CLASS",
+            "RecJet_partonFlavour_CLASS",
+            "RecJet_jetId_CLASS",
+            "RecJet_response_CLASS",
+            "RecJet_event_nJet_CLASS",
+            "RecJet_event_PV_npvsGood_CLASS",
+            "RecJet_event_MET_pt_CLASS",
+            "RecJet_nearest_dR_CLASS",
+            "RecJet_nearest_pt_CLASS"
+        ]
+
+    }
+}
