@@ -1,3 +1,6 @@
 **/__pycache__
 todo.md
 **/.ipynb_checkpoints
+
+*.pdf
+*.root
