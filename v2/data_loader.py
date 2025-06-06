@@ -92,19 +92,68 @@ class DataLoader():
 class Dataset:
 
     def __init__(self, config:"Config"):
-
+        
+        self.config = config
         train_loader, validation_loader, test_loader = DataLoader(config).create_dataloader()
         
         self.train = train_loader
         self.validation = validation_loader
         self.test = test_loader
-    
-        self.len_train = len(train_loader)
-        self.len_validation = len(validation_loader)
-        self.len_test = len(test_loader)
-    
+
+        config.datasetInfo = {}
+        config.datasetInfo.train_numbatch = len(train_loader)
+        config.datasetInfo.validation_numbatch = len(validation_loader)
+        config.datasetInfo.test_numbatch = len(test_loader)
+
+        (inp_sample_tensor, target_sample_tensor, spectators_sample_tensor) = train_loader.dataset[0]
+
+        config.datasetInfo.inputDim = inp_sample_tensor.shape[0]
+        config.datasetInfo.targetDim = target_sample_tensor.shape[0]
+        config.datasetInfo.spectatorsDim = spectators_sample_tensor.shape[0]
+
+        config.datasetInfo.trainTotalSamples = len(train_loader.dataset)
+        config.datasetInfo.validationTotalSamples = len(validation_loader.dataset)
+        config.datasetInfo.testTotalSamples = len(test_loader.dataset)
 
     def to(self, device):
         self.train = self.train.to(device)
         self.validation = self.validation.to(device)
         self.test = self.test.to(device)
+
+    def print_summary(self):
+        print("#"*50)
+        print("Dataset summary:")
+        print(f"Train: {self.config.datasetInfo.train_numbatch} batches, {self.config.datasetInfo.trainTotalSamples} samples")
+        print(f"Validation: {self.config.datasetInfo.validation_numbatch} batches, {self.config.datasetInfo.validationTotalSamples} samples")
+        print(f"Test: {self.config.datasetInfo.test_numbatch} batches, {self.config.datasetInfo.testTotalSamples} samples")
+        print("-"*50)
+        print(f"Input: {self.config.datasetInfo.inputDim} features")
+        print(f"Target: {self.config.datasetInfo.targetDim} features")
+        print(f"Spectators: {self.config.datasetInfo.spectatorsDim} features")
+        print("#"*50)
+    
+    def get_summary(self):
+        
+        return {
+            "train": {
+                "numbatch": self.config.datasetInfo.train_numbatch,
+                "total_samples": self.config.datasetInfo.trainTotalSamples,
+            },
+            "validation": {
+                "numbatch": self.config.datasetInfo.validation_numbatch,
+                "total_samples": self.config.datasetInfo.validationTotalSamples,
+            },
+            "test": {
+                "numbatch": self.config.datasetInfo.test_numbatch,
+                "total_samples": self.config.datasetInfo.testTotalSamples,
+            },
+            "input": {
+                "dim": self.config.datasetInfo.inputDim,
+            },
+            "target": {
+                "dim": self.config.datasetInfo.targetDim,
+            },
+            "spectators": {
+                "dim": self.config.datasetInfo.spectatorsDim,
+            }
+        }

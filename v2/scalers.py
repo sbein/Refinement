@@ -7,7 +7,7 @@ from typing import TYPE_CHECKING
 if TYPE_CHECKING:
     from config import Config
 
-import scaler_modules
+from modules import scaler_modules
 
 from torch import nn
 
@@ -158,10 +158,10 @@ class Scalers:
 
     
     def get_input_scalers(self):
-        return self.input_scalers
-    def get_inv_input_scalers(self):
-        return self.inverse_input_scalers
+        return self.input_scaler_model
+    def get_input_inverse_scalers(self):
+        return self.input_inverse_scaler_model
     def get_target_scalers(self):
-        return self.target_scalers
-    def get_inv_target_scalers(self):
-        return self.inverse_target_scalers
+        return self.target_scaler_model
+    def get_target_inverse_scalers(self):
+        return self.target_inverse_scaler_model

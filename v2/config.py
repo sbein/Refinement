@@ -17,6 +17,16 @@ class ConfigDict(dict):
     def __getattr__(self, key):
         return self.__getitem__(key)
 
+    def __setattr__(self, key, value):
+        if key == 'config_dict':
+            super().__setattr__(key, value)
+        else:
+            if hasattr(self, 'config_dict') and isinstance(self.config_dict, dict):
+                self.config_dict[key] = value
+                super().__setitem__(key, value)
+            else:
+                super().__setattr__(key, value)
+
 class Config(ConfigDict):
     def __init__(self, config_path:str=None, data:dict=None):
         if config_path is not None:
