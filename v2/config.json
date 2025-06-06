@@ -1,11 +1,11 @@
 {
     "inputSettings": {
-        "filePath" : "/eos/user/d/dboncukc/rootFiles/littletree_CMSSW_14_0_12_T1ttttRun3PU_step2_SIM_RECOBEFMIX_DIGI_L1_DIGI2RAW_L1Reco_RECO_PAT_NANO_PU_coffea_PUPPI.root",
+        "filePath" : "/Users/dorukhan/Desktop/cern/Refinement/workplace/littletree_CMSSW_14_0_12_T1ttttRun3PU_step2_SIM_RECOBEFMIX_DIGI_L1_DIGI2RAW_L1Reco_RECO_PAT_NANO_PU_coffea_PUPPI.root",
         "treeName" : "tJet",
         "preselection" : "GenJet_nearest_dR>0.5&&RecJet_nearest_dR_FastSim>0.5&&RecJet_nearest_dR_FullSim>0.5&&RecJet_btagUParTAK4B_FastSim>0&&RecJet_btagUParTAK4B_FullSim>0"
     },
     "outputSettings": {
-        "outputPath" : "/eos/user/d/dboncukc/rootFiles/fstest"
+        "outputPath" : "/Users/dorukhan/Desktop/cern/Refinement/workplace/fstest"
     },
     "generalSettings": {
         "trainingName" : "test",
@@ -27,6 +27,40 @@
         "epochs" : 1000,
         "learningRate" : 0.001,
         "randomSeed" : 42
+    },
+    "losses":{
+        "primary" : {
+            "type" : "mse",
+            "initParams" : {},
+            "forwardParams" : {
+                "input" : "$OUTPUT$",
+                "target" : "$TARGET$"
+            }
+        },
+        "mse_input_output" : {
+            "type" : "mse",
+            "initParams" : {},
+            "forwardParams" : {
+                "input" : "$VARIABLES$",
+                "target" : "$OUTPUT$"
+            }
+        },
+        "huber_output_target" : {
+            "type" : "huber",
+            "initParams" : {},
+            "forwardParams" : {
+                "input" : "$OUTPUT$",
+                "target" : "$TARGET$"
+            }
+        },
+        "huber_input_output": {
+            "type" : "huber",
+            "initParams" : {},
+            "forwardParams" : {
+                "input" : "$VARIABLES$",
+                "target" : "$OUTPUT$"
+            }
+        }
     },
     "scalers" : {
         "tanh1200" : {

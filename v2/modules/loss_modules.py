@@ -1,16 +1,6 @@
 import torch
 from torch import nn
 
-losses = {
-    'l1': nn.L1Loss,
-    'l2': nn.MSELoss,
-    'bce': nn.BCELoss,
-    'bce_logits': nn.BCEWithLogitsLoss,
-    'cross_entropy': nn.CrossEntropyLoss,
-    'smooth_l1': nn.SmoothL1Loss,
-    'mmd': MMDLoss
-}
-
 class MMDLoss(nn.Module):
     def __init__(self, kernel_type='rbf', kernel_mul=2.0, kernel_num=5, fix_sigma=None, unbiased=False):
         """
@@ -143,3 +133,15 @@ class MMDLoss(nn.Module):
             loss = term1 + term2 - term3
             
         return loss
+
+losses = {
+    'l1': nn.L1Loss,
+    'l2': nn.MSELoss,
+    'mse': nn.MSELoss,
+    'huber': nn.HuberLoss,
+    'bce': nn.BCELoss,
+    'bce_logits': nn.BCEWithLogitsLoss,
+    'cross_entropy': nn.CrossEntropyLoss,
+    'smooth_l1': nn.SmoothL1Loss,
+    'mmd': MMDLoss
+}
