@@ -1,5 +1,7 @@
 import torch
 from torch import nn
+import pandas as pd
+import os
 
 from dataclasses import dataclass
 from typing import TYPE_CHECKING
@@ -28,9 +30,18 @@ class LossManager:
         self._loss_classes = {}
         self.loss_funcs = {}
         self.epoch = None
-
+        self.primary_loss = None
         for loss_name, loss_config in self.config.items():
+
+            if loss_config.get("isPrimary",False):
+                if self.primary_loss is not None:
+                    raise ValueError("You can only select one primary loss function.")
+                self.primary_loss = loss_name
+
             self.init_loss_fn(loss_name, loss_config['type'], loss_config.get('initParams', {}), loss_config.get('forwardParams', {}))
+
+        if self.primary_loss is None:
+            raise ValueError("No primary loss function defined. You have to define one for training.")
 
     def set_epoch(self, epoch):
         self.epoch = epoch
@@ -87,6 +98,7 @@ class LossManager:
 
     def _calculate_one(self, name:str, is_val:bool, input, output, target):
         value = self.loss_funcs[name](input, output, target)
+        value = value.item()
         
         if is_val:
             if self.epoch is None:
@@ -106,4 +118,37 @@ class LossManager:
         return self.loss_funcs[name]
 
     def get_primary_loss(self):
-        return self.get_loss_fn('primary')
+        return self.get_loss_fn(self.primary_loss)
+    
+    def save_log(self, path: str):
+        """Save loss logs to CSV format at the specified path."""
+        # Create directory if it doesn't exist
+        os.makedirs(os.path.dirname(path), exist_ok=True)
+        
+        # Prepare data for CSV
+        data = []
+        
+        # Add training logs
+        for loss_name, log_entries in self.loss_log.train.items():
+            for entry in log_entries:
+                data.append({
+                    'loss_name': loss_name,
+                    'type': 'train',
+                    'epoch': entry.epoch,
+                    'value': entry.value
+                })
+        
+        # Add validation logs
+        for loss_name, log_entries in self.loss_log.validation.items():
+            for entry in log_entries:
+                data.append({
+                    'loss_name': loss_name,
+                    'type': 'validation',
+                    'epoch': entry.epoch,
+                    'value': entry.value
+                })
+        
+        # Create DataFrame and save to CSV
+        df = pd.DataFrame(data)
+        df.to_csv(path, index=False)
+        print(f"Loss logs saved to {path}")

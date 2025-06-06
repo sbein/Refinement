@@ -29,7 +29,8 @@
         "randomSeed" : 42
     },
     "losses":{
-        "primary" : {
+        "mse_output_target" : {
+            "isPrimary" : true,
             "type" : "mse",
             "initParams" : {},
             "forwardParams" : {
