@@ -26,7 +26,8 @@
         "numBatches" : [10, 10, 10],
         "epochs" : 1000,
         "learningRate" : 0.001,
-        "randomSeed" : 42
+        "randomSeed" : 42,
+        "optimizerName": "adam"
     },
     "losses":{
         "mse_output_target" : {
