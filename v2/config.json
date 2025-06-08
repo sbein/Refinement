@@ -5,7 +5,7 @@
         "preselection" : "GenJet_nearest_dR>0.5&&RecJet_nearest_dR_FastSim>0.5&&RecJet_nearest_dR_FullSim>0.5&&RecJet_btagUParTAK4B_FastSim>0&&RecJet_btagUParTAK4B_FullSim>0"
     },
     "outputSettings": {
-        "outputPath" : "/Users/dorukhan/Desktop/cern/Refinement/workplace/fstest"
+        "storeFolder" : "/Users/dorukhan/Desktop/cern/Refinement/workplace/fstest"
     },
     "generalSettings": {
         "trainingName" : "test",
@@ -24,7 +24,7 @@
     "trainingSettings": {
         "batchSize" : 1024,
         "numBatches" : [10, 10, 10],
-        "epochs" : 1000,
+        "epochs" : 10,
         "learningRate" : 0.001,
         "randomSeed" : 42,
         "optimizerName": "adam",
@@ -113,15 +113,12 @@
         },
         "spectators" : [
             "EventID",
-            "GenJet_pt",
-            "GenJet_eta",
             "GenJet_phi",
             "GenJet_mass",
             "GenJet_hadronFlavour",
             "GenJet_partonFlavour",
             "GenJet_nearest_dR",
             "GenJet_nearest_pt",
-            "RecJet_pt_CLASS",
             "RecJet_eta_CLASS",
             "RecJet_phi_CLASS",
             "RecJet_mass_CLASS",

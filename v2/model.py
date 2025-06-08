@@ -87,8 +87,8 @@ class RefinementModelBuilder():
             if output_path is None:
                 return model_graph
             else:
-                format = output_path.split(".")[-1]
-                model_graph.render(output_path.replace(f".{format}",""),format=format,cleanup=True)
+                output_path = output_path + 'model_architecture'
+                model_graph.render(output_path,format='pdf',cleanup=True)
                 return None
         except ImportError as e:
             print('torchview not installed, skipping architecture saving')

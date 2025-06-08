@@ -9,7 +9,6 @@ if TYPE_CHECKING:
     from model import RefinementModelBuilder
     from scalers import Scalers
 
-
 class Trainer:
     def __init__(self, 
     config: "Config", 
@@ -28,9 +27,9 @@ class Trainer:
         
         config_device = config.trainingSettings.device
         if config_device == 'auto' or config_device is None:
-            device = torch.device('cuda' if torch.cuda.is_available() else 'cpu')
+            self.device = torch.device('cuda' if torch.cuda.is_available() else 'cpu')
         else:
-            device = torch.device(config_device)
+            self.device = torch.device(config_device)
         
         optimizer_name = config.trainingSettings.optimizerName
         
@@ -43,8 +42,7 @@ class Trainer:
         self.postprocessor_inverse = scalers.get_target_scalers()
         
         model = refinement_model_builder.build()
-        self.model = model.to(device)
-        self.dataset.to(device)
+        self.model = model.to(self.device)
         self.prepare_optimizer(optimizer_name)
 
     def prepare_optimizer(self, optimizer_name: str):
@@ -68,18 +66,18 @@ class Trainer:
             train_samples = 0
             
             for batch_idx, (inp, target, spectators) in enumerate(self.dataset.train):
-
+                
                 inp = inp.to(self.device)
                 target = target.to(self.device)
-                
+
                 inputs = self.preprocessor(inp)
                 targets = self.postprocessor_inverse(target)
                 
                 self.optimizer.zero_grad()
                 outputs = self.model(inputs)
                 
-                self.losses.calculate(inputs, outputs, targets, epoch, is_val=False)
-                primary_loss = self.losses.get_primary_loss()(inputs, outputs, targets)
+                self.losses.calculate(inputs, outputs, targets, epoch, batch_idx, mode='train')
+                primary_loss = self.losses.get_primary_loss_fn()(inputs, outputs, targets)
                 
                 primary_loss.backward()
                 self.optimizer.step()
@@ -89,7 +87,7 @@ class Trainer:
             
             avg_train_loss = train_loss / train_samples
             
-            val_loss = self.evaluate(device)
+            val_loss = self.evaluate()
             
             print(f"Epoch {epoch+1:4d}/{self.epochs} | "
                   f"Train Loss: {avg_train_loss:.6f} | "
@@ -108,16 +106,17 @@ class Trainer:
         
         with torch.no_grad():
             for batch_idx, (inp, target, spectators) in enumerate(self.dataset.validation):
-
+                
                 inp = inp.to(self.device)
                 target = target.to(self.device)
-                
+
                 inputs = self.preprocessor(inp)
                 targets = self.postprocessor_inverse(target)
                 
                 outputs = self.model(inputs)
                 
-                primary_loss = self.losses.get_primary_loss()(inputs, outputs, targets)
+                self.losses.calculate(inputs, outputs, targets, 0, batch_idx, mode='validation')
+                primary_loss = self.losses.get_primary_loss_fn()(inputs, outputs, targets)
                 
                 val_loss += primary_loss.item() * inputs.size(0)
                 val_samples += inputs.size(0)
@@ -134,16 +133,17 @@ class Trainer:
         
         with torch.no_grad():
             for batch_idx, (inp, target, spectators) in enumerate(self.dataset.test):
-
+                
                 inp = inp.to(self.device)
                 target = target.to(self.device)
-                
+
                 inputs = self.preprocessor(inp)
                 targets = self.postprocessor_inverse(target)
                 
                 outputs = self.model(inputs)
                 
-                primary_loss = self.losses.get_primary_loss()(inputs, outputs, targets)
+                self.losses.calculate(inputs, outputs, targets, 0, batch_idx, mode='test')
+                primary_loss = self.losses.get_primary_loss_fn()(inputs, outputs, targets)
                 
                 test_loss += primary_loss.item() * inputs.size(0)
                 test_samples += inputs.size(0)
@@ -152,3 +152,11 @@ class Trainer:
         print(f"Test Loss: {avg_test_loss:.6f}")
         
         return avg_test_loss
+
+
+    def save_results(self, output_path: str):
+        m = torch.jit.script(self.model)
+        torch.jit.save(m, output_path + "model.pt")
+        print(f"Model saved to {output_path + 'model.pt'}")
+        self.dataset.save_root(self.model, "tJet", output_path + "data.root")
+        print(f"Data saved to {output_path +'data.root'}")

@@ -15,18 +15,20 @@ from modules import loss_modules
 class LogEntry:
     value: float
     epoch: int
+    batch: int
 
 @dataclass
 class LossLog:
     train: dict[str, list[LogEntry]]
     validation : dict[str, list[LogEntry]]
+    test: dict[str, list[LogEntry]]
 
 class LossManager:
 
     def __init__(self, config: "Config"):
         self.config = config.losses
         self.numParameters = len(config.features.parameters if config.features.parameters else {})
-        self.loss_log = LossLog({}, {})
+        self.loss_log = LossLog({}, {}, {})
         self._loss_classes = {}
         self.loss_funcs = {}
         self.epoch = None
@@ -90,65 +92,103 @@ class LossManager:
 
         self.loss_log.train[loss_name] = []
         self.loss_log.validation[loss_name] = []
+        self.loss_log.test[loss_name] = []
 
-    def calculate(self, input, output, target, epoch:int, is_val:bool):
+    def calculate(self, input, output, target, epoch:int, batch:int, mode:str = 'train'):
         self.set_epoch(epoch)
         for name in self.loss_funcs.keys():
-            self._calculate_one(name, is_val, input, output, target)        
+            self._calculate_one(name, mode, input, output, target, batch)        
 
-    def _calculate_one(self, name:str, is_val:bool, input, output, target):
+    def _calculate_one(self, name:str, mode:str, input, output, target, batch:int):
         value = self.loss_funcs[name](input, output, target)
         value = value.item()
         
-        if is_val:
-            if self.epoch is None:
+        if self.epoch is None:
+            if mode == 'test':
+                epoch = len(self.loss_log.test[name])
+            elif mode == 'validation':
                 epoch = len(self.loss_log.validation[name])
             else:
-                epoch = self.epoch
-            self.loss_log.validation[name].append(LogEntry(value, epoch))
-        else:
-            if self.epoch is None:
                 epoch = len(self.loss_log.train[name])
-            else:
-                epoch = self.epoch
-            self.loss_log.train[name].append(LogEntry(value, epoch))
+        else:
+            epoch = self.epoch
+        
+        if mode == 'test':
+            self.loss_log.test[name].append(LogEntry(value, epoch, batch))
+        elif mode == 'validation':
+            self.loss_log.validation[name].append(LogEntry(value, epoch, batch))
+        else:
+            self.loss_log.train[name].append(LogEntry(value, epoch, batch))
+        
         return value
     
     def get_loss_fn(self, name: str):
         return self.loss_funcs[name]
 
-    def get_primary_loss(self):
+    def get_primary_loss_fn(self):
         return self.get_loss_fn(self.primary_loss)
     
-    def save_log(self, path: str):
-        """Save loss logs to CSV format at the specified path."""
-        # Create directory if it doesn't exist
-        os.makedirs(os.path.dirname(path), exist_ok=True)
+    def get_primary_loss(self, mode: int, epoch:int, batch:int):
+
+        if mode == "test":
+            log_entries = self.loss_log.test[self.primary_loss]
+        elif mode == "validation":
+            log_entries = self.loss_log.validation[self.primary_loss]
+        else:
+            log_entries = self.loss_log.train[self.primary_loss]
+
+        for entry in log_entries:
+            if entry.epoch == epoch and entry.batch == batch:
+                return entry.value
+
+        return None
+
+    def get_epoch_average(self, loss_name: str, epoch: int, is_val: bool = False) -> float:
+
+        log_entries = self.loss_log.validation[loss_name] if is_val else self.loss_log.train[loss_name]
+        epoch_values = [entry.value for entry in log_entries if entry.epoch == epoch]
         
-        # Prepare data for CSV
+        if not epoch_values:
+            raise ValueError(f"No data found for loss '{loss_name}' at epoch {epoch}")
+        
+        return sum(epoch_values) / len(epoch_values)
+    
+    def save_log(self, output_path: str):
+
+        output_path  = output_path + "loss_logs.csv"
+        
         data = []
         
-        # Add training logs
         for loss_name, log_entries in self.loss_log.train.items():
             for entry in log_entries:
                 data.append({
                     'loss_name': loss_name,
                     'type': 'train',
                     'epoch': entry.epoch,
+                    'batch': entry.batch,
                     'value': entry.value
                 })
         
-        # Add validation logs
         for loss_name, log_entries in self.loss_log.validation.items():
             for entry in log_entries:
                 data.append({
                     'loss_name': loss_name,
                     'type': 'validation',
                     'epoch': entry.epoch,
+                    'batch': entry.batch,
                     'value': entry.value
                 })
         
-        # Create DataFrame and save to CSV
+        for loss_name, log_entries in self.loss_log.test.items():
+            for entry in log_entries:
+                data.append({
+                    'loss_name': loss_name,
+                    'type': 'test',
+                    'epoch': entry.epoch,
+                    'batch': entry.batch,
+                    'value': entry.value
+                })
+        
         df = pd.DataFrame(data)
-        df.to_csv(path, index=False)
-        print(f"Loss logs saved to {path}")
+        df.to_csv(output_path, index=False)
+        print(f"Loss logs saved to {output_path}")

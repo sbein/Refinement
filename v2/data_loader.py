@@ -94,8 +94,13 @@ class Dataset:
     def __init__(self, config:"Config"):
         
         self.config = config
-        train_loader, validation_loader, test_loader = DataLoader(config).create_dataloader()
+        dataloader = DataLoader(config)
+        train_loader, validation_loader, test_loader = dataloader.create_dataloader()
         
+        self.dict_input = dataloader.dict_input        
+        self.dict_target = dataloader.dict_target
+        self.dict_spectators = dataloader.dict_spectators
+
         self.train = train_loader
         self.validation = validation_loader
         self.test = test_loader
@@ -114,11 +119,6 @@ class Dataset:
         config.datasetInfo.trainTotalSamples = len(train_loader.dataset)
         config.datasetInfo.validationTotalSamples = len(validation_loader.dataset)
         config.datasetInfo.testTotalSamples = len(test_loader.dataset)
-
-    def to(self, device):
-        self.train = self.train.to(device)
-        self.validation = self.validation.to(device)
-        self.test = self.test.to(device)
 
     def print_summary(self):
         print("#"*50)
@@ -157,3 +157,64 @@ class Dataset:
                 "dim": self.config.datasetInfo.spectatorsDim,
             }
         }
+
+
+
+
+    def process_dataset_split(self, model, split_type):
+
+        if split_type == 0:
+            dataloader = self.train
+        elif split_type == 1:
+            dataloader = self.validation
+        elif split_type == 2:
+            dataloader = self.test
+        else:
+            raise ValueError("Invalid split type")
+
+        for i, (inp, target, spectators) in enumerate(dataloader):
+            out = model(inp)
+            
+            self.out_dict['isTrainValTest'].append(torch.ones(inp.size(dim=0), dtype=torch.int) * split_type)
+            branch_list = []
+
+            for ib, branch in enumerate(self.dict_input):
+                if branch in branch_list:
+                    continue
+                self.out_dict[branch].append(inp[:, ib])
+                branch_list.append(branch)
+            for ib, branch in enumerate(self.dict_target):
+                if branch in branch_list:
+                    continue
+                self.out_dict[branch].append(target[:, ib])
+                branch_list.append(branch)
+            for ib, branch in enumerate(self.dict_target):
+                if branch.replace('FullSim', 'Refined') in branch_list:
+                    continue
+                self.out_dict[branch.replace('FullSim', 'Refined')].append(out[:, ib])
+                branch_list.append(branch.replace('FullSim', 'Refined'))
+            for ib, branch in enumerate(self.dict_spectators):
+                if branch in branch_list:
+                    continue
+                self.out_dict[branch].append(spectators[:, ib])
+                branch_list.append(branch)
+
+
+    def save_root(self, model, treename, path):
+
+        self.out_dict = {key: [] for key in ['isTrainValTest'] + list(self.dict_input.keys()) +  list(self.dict_target.keys()) + [branch.replace('FullSim', 'Refined') for branch in self.dict_target.keys()] +  list(self.dict_spectators.keys())}
+
+        model.eval()
+        
+        with torch.no_grad():
+            self.process_dataset_split(model, 0)
+            
+            self.process_dataset_split(model, 1)
+            
+            self.process_dataset_split(model, 2)
+        
+        for branch in self.out_dict:
+            self.out_dict[branch] = torch.cat(self.out_dict[branch]).detach().cpu().numpy()
+    
+        out_rdf = ROOT.RDF.FromNumpy(self.out_dict)
+        out_rdf.Snapshot(treename, path)
