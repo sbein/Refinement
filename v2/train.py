@@ -1,3 +1,5 @@
+import torch
+import torch.nn as nn
 from typing import TYPE_CHECKING
 
 if TYPE_CHECKING:
@@ -20,35 +22,133 @@ class Trainer:
         self.dataset = dataset
         self.losses = losses
 
-        self.epochs = config.epochs
+        self.epochs = config.trainingSettings.epochs
         self.batch_size = config.trainingSettings.batchSize
         self.learning_rate = config.trainingSettings.learningRate
         
+        config_device = config.trainingSettings.device
+        if config_device == 'auto' or config_device is None:
+            device = torch.device('cuda' if torch.cuda.is_available() else 'cpu')
+        else:
+            device = torch.device(config_device)
+        
         optimizer_name = config.trainingSettings.optimizerName
-        self.prepare_optimizer(optimizer_name)
+        
+        self.model = None
+        self.optimizer = None
 
         self.preprocessor = scalers.get_input_scalers()
-        self.model = refinement_model_builder.build()
+        self.refinement_model_builder = refinement_model_builder
         self.postprocessor = scalers.get_target_inverse_scalers()
         self.postprocessor_inverse = scalers.get_target_scalers()
+        
+        model = refinement_model_builder.build()
+        self.model = model.to(device)
+        self.dataset.to(device)
+        self.prepare_optimizer(optimizer_name)
 
     def prepare_optimizer(self, optimizer_name: str):
-        if optimizer_name == "Adam":
-            optimizer = torch.optim.Adam(self.model.parameters(), lr=self.learning_rate)
-        elif optimizer_name == "SGD":
-            optimizer = torch.optim.SGD(self.model.parameters(), lr=self.learning_rate)
+        if optimizer_name.lower() == "adam":
+            self.optimizer = torch.optim.Adam(self.model.parameters(), lr=self.learning_rate)
+        elif optimizer_name.lower() == "sgd":
+            self.optimizer = torch.optim.SGD(self.model.parameters(), lr=self.learning_rate)
         else:
-            raise ValueError("Unknown optimizer name")
-        self.optimizer = optimizer
+            raise ValueError(f"Unknown optimizer name: {optimizer_name}")
 
 
     def train(self):
+                
+        print(f"Starting training for {self.epochs} epochs on {self.device}")
+        print("-" * 60)
+        
         for epoch in range(self.epochs):
-            for batch, (inp, target, spectators) in enumerate(self.dataset.train):
-                inputs = self.preprocessor(inputs)
-                targets = self.postprocessor_inverse(targets)
-                outputs = self.model(inputs)
-                loss = self.losses.calculate_loss(outputs, targets)
+
+            self.model.train()
+            train_loss = 0.0
+            train_samples = 0
+            
+            for batch_idx, (inp, target, spectators) in enumerate(self.dataset.train):
+
+                inp = inp.to(self.device)
+                target = target.to(self.device)
+                
+                inputs = self.preprocessor(inp)
+                targets = self.postprocessor_inverse(target)
+                
                 self.optimizer.zero_grad()
-                loss.backward()
+                outputs = self.model(inputs)
+                
+                self.losses.calculate(inputs, outputs, targets, epoch, is_val=False)
+                primary_loss = self.losses.get_primary_loss()(inputs, outputs, targets)
+                
+                primary_loss.backward()
                 self.optimizer.step()
+                
+                train_loss += primary_loss.item() * inputs.size(0)
+                train_samples += inputs.size(0)
+            
+            avg_train_loss = train_loss / train_samples
+            
+            val_loss = self.evaluate(device)
+            
+            print(f"Epoch {epoch+1:4d}/{self.epochs} | "
+                  f"Train Loss: {avg_train_loss:.6f} | "
+                  f"Val Loss: {val_loss:.6f}")
+        
+        print("-" * 60)
+        print("Training completed!")
+        
+        return self.model
+    
+    def evaluate(self):
+        
+        self.model.eval()
+        val_loss = 0.0
+        val_samples = 0
+        
+        with torch.no_grad():
+            for batch_idx, (inp, target, spectators) in enumerate(self.dataset.validation):
+
+                inp = inp.to(self.device)
+                target = target.to(self.device)
+                
+                inputs = self.preprocessor(inp)
+                targets = self.postprocessor_inverse(target)
+                
+                outputs = self.model(inputs)
+                
+                primary_loss = self.losses.get_primary_loss()(inputs, outputs, targets)
+                
+                val_loss += primary_loss.item() * inputs.size(0)
+                val_samples += inputs.size(0)
+        
+        return val_loss / val_samples
+    
+    def test(self):
+        
+        self.model.eval()
+        test_loss = 0.0
+        test_samples = 0
+        
+        print("Running test evaluation...")
+        
+        with torch.no_grad():
+            for batch_idx, (inp, target, spectators) in enumerate(self.dataset.test):
+
+                inp = inp.to(self.device)
+                target = target.to(self.device)
+                
+                inputs = self.preprocessor(inp)
+                targets = self.postprocessor_inverse(target)
+                
+                outputs = self.model(inputs)
+                
+                primary_loss = self.losses.get_primary_loss()(inputs, outputs, targets)
+                
+                test_loss += primary_loss.item() * inputs.size(0)
+                test_samples += inputs.size(0)
+        
+        avg_test_loss = test_loss / test_samples
+        print(f"Test Loss: {avg_test_loss:.6f}")
+        
+        return avg_test_loss

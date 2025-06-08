@@ -27,7 +27,8 @@
         "epochs" : 1000,
         "learningRate" : 0.001,
         "randomSeed" : 42,
-        "optimizerName": "adam"
+        "optimizerName": "adam",
+        "device": "auto"
     },
     "losses":{
         "mse_output_target" : {
