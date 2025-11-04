@@ -52,7 +52,7 @@ import my_mmd
 import my_mdmm
 from my_modules import *
 
-doSingleStage = True
+doSingleStage = False
 is_test = False
 
 try: training_id = sys.argv[1]
