@@ -1,39 +1,43 @@
 """
-
-#first 
+###best one: 20April2025highlr7sb_ext (preserve: 20April2025...highlr7sb_ext)
+cd /data/dust/user/beinsam/FastSim/Refinement/Regress
 screen
-condor_submit -i big1.submit 
+condor_submit -i big.submit 
 source /afs/desy.de/user/b/beinsam/.bash_profile
 cd /data/dust/user/beinsam/FastSim/Refinement/Regress
 source /cvmfs/sft.cern.ch/lcg/views/LCG_106_cuda/x86_64-el9-gcc11-opt/setup.sh
-mkdir 18April2025lowlr_ext && cp trainRegression_Jet.py my*.py 18April2025lowlr_ext/
-python trainRegression_Jet.py 18April2025lowlr_ext 2>&1 | tee traininglog_regressionJethighlr.txt
-cd plotting
-python plotLearningCurves.py 18April2025lowlr_ext &
-python plotRegression1D.py 18April2025lowlr_ext
-python cropPNGlinlog.py "figs*/reg*.png"
-find figs*/ -type f -name 'reg*.png' \! -name '*log.png*' -exec rm {} + && rm fig*/*{mmdfixsigma_output,mse_input_output}*
-python plotRegressionCorrelationFactors.py 18April2025lowlr_ext
-rm -rf /afs/desy.de/user/b/beinsam/www/FastSim/Refinement/Jets/figs18April2025lowlr_ext*
-cp -r figs18April2025lowlr_ext /afs/desy.de/user/b/beinsam/www/FastSim/Refinement/Jets
-python /afs/desy.de/user/b/beinsam/www/templates/dir_indexer.py /afs/desy.de/user/b/beinsam/www/FastSim/Refinement/Jets -r -t /afs/desy.de/user/b/beinsam/www/templates/default.html && python /afs/desy.de/user/b/beinsam/www/templates/bigindexer.py /afs/desy.de/user/b/beinsam/www/FastSim/Refinement/Jets/
-cp ../18April2025lowlr_ext/* /afs/desy.de/user/b/beinsam/www/FastSim/Refinement/Jets/18April2025lowlr_ext/
 
-#or
-mkdir 20April2025highlr7sb_ext && cp trainRegression_Jet.py my*.py 20April2025highlr7sb_ext/
-python trainRegression_Jet.py 20April2025highlr7sb_ext 2>&1 | tee traininglog_regressionJetWithClassifier.txt
+mkdir 31July_long && cp trainRegression_Jet.py my*.py 31July_long/
+python trainRegression_Jet.py 31July_long 2>&1 | tee traininglog_regression31July_long.txt
+python posttrainRegression_Jet.py 31July_long && mv TrainingOutput/output_refinement_regression_31July_long_withClassifier.root TrainingOutput/output_refinement_regression_31July_long.root
 cd plotting
-python plotLearningCurves.py 20April2025highlr7sb_ext
-python plotRegression1D.py 20April2025highlr7sb_ext
+python plotLearningCurves.py 31July_long &
+python plotRegression1D.py 31July_long
 python cropPNGlinlog.py "figs*/reg*.png"
 find figs*/ -type f -name 'reg*.png' \! -name '*log.png*' -exec rm {} + && rm fig*/*{mmdfixsigma_output,mse_input_output}*
-python plotRegressionCorrelationFactors.py 20April2025highlr7sb_ext
-rm -rf /afs/desy.de/user/b/beinsam/www/FastSim/Refinement/Jets/figs20April2025highlr7sb_ext*
-cp -r figs20April2025highlr7sb_ext /afs/desy.de/user/b/beinsam/www/FastSim/Refinement/Jets
+python plotRegressionCorrelationFactors.py 31July_long
+rm -rf /afs/desy.de/user/b/beinsam/www/FastSim/Refinement/Jets/figs31July_long*
+cp -r figs31July_long /afs/desy.de/user/b/beinsam/www/FastSim/Refinement/Jets
 python /afs/desy.de/user/b/beinsam/www/templates/dir_indexer.py /afs/desy.de/user/b/beinsam/www/FastSim/Refinement/Jets -r -t /afs/desy.de/user/b/beinsam/www/templates/default.html && python /afs/desy.de/user/b/beinsam/www/templates/bigindexer.py /afs/desy.de/user/b/beinsam/www/FastSim/Refinement/Jets/
-cp ../20April2025highlr7sb_ext/* /afs/desy.de/user/b/beinsam/www/FastSim/Refinement/Jets/figs20April2025highlr7sb_ext/
+cp ../31July_long/* /afs/desy.de/user/b/beinsam/www/FastSim/Refinement/Jets/figs31July_long/
+
+
+mkdir 28JulyTanh800_long && cp trainRegression_Jet.py my*.py 28JulyTanh800_long/
+python trainRegression_Jet.py 28JulyTanh800_long 2>&1 | tee traininglog_regression28JulyTanh800_long.txt
+cd plotting
+python plotLearningCurves.py 28JulyTanh800_long &
+python plotRegression1D.py 28JulyTanh800_long
+python cropPNGlinlog.py "figs*/reg*.png"
+find figs*/ -type f -name 'reg*.png' \! -name '*log.png*' -exec rm {} + && rm fig*/*{mmdfixsigma_output,mse_input_output}*
+python plotRegressionCorrelationFactors.py 28JulyTanh800_long
+rm -rf /afs/desy.de/user/b/beinsam/www/FastSim/Refinement/Jets/figs28JulyTanh800_long*
+cp -r figs28JulyTanh800_long /afs/desy.de/user/b/beinsam/www/FastSim/Refinement/Jets/
+python /afs/desy.de/user/b/beinsam/www/templates/dir_indexer.py /afs/desy.de/user/b/beinsam/www/FastSim/Refinement/Jets -r -t /afs/desy.de/user/b/beinsam/www/templates/default.html && python /afs/desy.de/user/b/beinsam/www/templates/bigindexer.py /afs/desy.de/user/b/beinsam/www/FastSim/Refinement/Jets/
+cp ../28JulyTanh800_long/* /afs/desy.de/user/b/beinsam/www/FastSim/Refinement/Jets/figs28JulyTanh800_long/
+
+
+...
 """
-
 import os, sys
 import csv
 from datetime import datetime
@@ -54,8 +58,8 @@ is_test = False
 try: training_id = sys.argv[1]
 except: training_id = '15April2025'
 
-if 'withClassifier' in training_id: refineClassifier = True
-else: refineClassifier = False
+if 'wClsfr' in training_id: reevalClassifier = True
+else: reevalClassifier = False
 is_verbose = False
 
 
@@ -84,6 +88,8 @@ in_path = '/data/dust/user/beinsam/FastSim/Refinement/Regress/Classify/littletre
 in_tree = 'tJet'
 preselection = 'GenJet_nearest_dR>0.5&&RecJet_nearest_dR_FastSim>0.5&&RecJet_nearest_dR_FullSim>0.5' \
                '&&RecJet_btagUParTAK4B_FastSim>0&&RecJet_btagUParTAK4B_FullSim>0'  # make sure the ParT taggers are defined
+#allowing the out-of-place UParT guys to be refined
+#preselection = 'GenJet_nearest_dR>0.5&&RecJet_nearest_dR_FastSim>0.5&&RecJet_nearest_dR_FullSim>0.5'  # make sure the ParT taggers are defined               
 
 out_dir = '/data/dust/user/beinsam/FastSim/Refinement/Regress/TrainingOutput/'
 out_path = out_dir+'output_refinement_regression_' + training_id + '.root'
@@ -98,11 +104,13 @@ onnxcompatible = True
 
 num_skipblocks = 5
 #num_skipblocks = 7
+num_skipblocks = 9
 #num_skipblocks = 2#sb
 num_layers_per_skipblock = 2
 #num_layers_per_skipblock = 3##bad!
 #nodes_hidden_layer = 1024
 nodes_hidden_layer = 256
+nodes_hidden_layer = 512
 if is_test: nodes_hidden_layer = 256#sb
 
 dropout = 0.2
@@ -124,13 +132,19 @@ logitfactor = 1.
 '''
 
 if is_test: 
-    num_epochs = 1000
+    num_epochs = 20
 else: 
-    num_epochs = 200
-    num_epochs = 1000    
-    #num_epochs = 20
+    num_epochs = 100
+    num_epochs = 1000
+    num_epochs = 2000
+    num_epochs = 2000
+      
+    #num_epochs = 500
+    #num_epochs = 200
     
-learning_rate = 1e-5#lowest and best so far, could try lower 
+#learning_rate = 1e-5#classic low, but it wasn't necessarily below the optimum
+learning_rate = 2e-6
+#learning_rate = 5e-6# pre-May5
 #learning_rate = 1e-4
 #learning_rate = 3e-4
 
@@ -160,13 +174,17 @@ onehotencode = ('RecJet_hadronFlavour_FastSim', [0, 4, 5])  # add one-hot-encodi
 # onehotencode = False
 
 PARAMETERS = [
-    ('GenJet_pt', ['tanh200', 'logit']),
+    #('GenJet_pt', ['tanh200', 'logit']),
+    ('GenJet_pt', []),    
+    #('GenJet_pt', ['log10']),
     ('GenJet_eta', []),
     ('RecJet_hadronFlavour_FastSim', [])
 ]
 
 # if using DeepJetConstraint the DeepJet transformations have to be explicitly adapted in the DeepJetConstraint module
 VARIABLES = [
+    #('RecJet_pt_CLASS', ['tanh200', 'logit']),
+    #('RecJet_pt_CLASS', ['log10']),
     ('RecJet_pt_CLASS', []),
     ('RecJet_btagDeepFlavB_CLASS', ['logit']),
     ('RecJet_btagDeepFlavCvB_CLASS', ['logit']),
@@ -177,8 +195,32 @@ VARIABLES = [
     ('RecJet_btagUParTAK4CvL_CLASS', ['logit']),
     ('RecJet_btagUParTAK4QvG_CLASS', ['logit']),
 ]
-if refineClassifier: VARIABLES.append(('RecJet_ffClassifier_CLASS', ['logit']))
 
+
+if reevalClassifier: 
+    class SimpleClassifier(nn.Module):
+        def __init__(self, input_dim):
+            super().__init__()
+            self.net = nn.Sequential(
+                nn.Linear(input_dim, 32),
+                nn.ReLU(),
+                nn.Linear(32, 16),
+                nn.ReLU(),
+                nn.Linear(16, 1),
+                nn.Sigmoid()
+            )
+        def forward(self, x):
+            return self.net(x)
+    
+    # ---- Load pretrained classifier ----
+    classifier = SimpleClassifier(len(VARIABLES))
+    #classifier.load_state_dict(torch.load("Classify/fastsim_vs_fullsim_model.pt", map_location=device))
+    classifier.load_state_dict(torch.load("Classify/fastsim_vs_fullsim_model_transformed.pt", map_location=device))
+    
+    classifier.eval()
+    classifier.to(device)
+#if reevalClassifier: VARIABLES.append(('RecJet_ffClassifier_CLASS', ['logit']))
+else: classifier = None
 spectators_raw = [
     'EventID',
     'GenJet_pt',
@@ -344,6 +386,9 @@ logitmaskWithoutParameters = [int('logit' in name[1]) for name in VARIABLES]
 tanh200maskWithParameters = [int('tanh200' in name[1]) for name in PARAMETERS + VARIABLES]
 tanh200maskWithoutParameters = [int('tanh200' in name[1]) for name in VARIABLES]
 
+log10maskWithParameters = [int('log10' in name[1]) for name in PARAMETERS + VARIABLES]
+log10maskWithoutParameters = [int('log10' in name[1]) for name in VARIABLES]
+
 # without artificial increase due to one-hot-encoding
 real_parameters = PARAMETERS.copy()
 real_len_parameters = len(PARAMETERS)
@@ -380,8 +425,9 @@ nodes_hidden_layer_list = [nodes_hidden_layer for _ in range(num_skipblocks)]
 
 model = nn.Sequential()
 
-if any(tanh200maskWithParameters): model.add_module('Tanh200Transform', TanhTransform(mask=tanh200maskWithParameters, norm=200))
-if any(logitmaskWithParameters): model.add_module('LogitTransform', LogitTransform(mask=logitmaskWithParameters, factor=logitfactor, onnxcompatible=onnxcompatible, eps=epsilon, tiny=tiny))
+if any(tanh200maskWithParameters): model.add_module('tanh200Transform', TanhTransform(mask=tanh200maskWithParameters, norm=200))
+if any(log10maskWithParameters): model.add_module('log10Transform', LogTransform(mask=log10maskWithParameters, base=10))
+if any(logitmaskWithParameters): model.add_module('logitTransform', LogitTransform(mask=logitmaskWithParameters, factor=logitfactor, onnxcompatible=onnxcompatible, eps=epsilon, tiny=tiny))
 
 if onehotencode: model.add_module('OneHotEncode_' + onehotencode[0], OneHotEncode(source_idx=onehotencode[2], target_vals=onehotencode[1]))
 
@@ -421,8 +467,9 @@ for k in range(num_skipblocks - 1):
                                                                                           nskiplayers=num_layers_per_skipblock,
                                                                                           dropout=dropout))
 
-if any(logitmaskWithoutParameters): model.add_module('LogitTransformBack', LogitTransformBack(mask=logitmaskWithoutParameters, factor=logitfactor))
-if any(tanh200maskWithoutParameters): model.add_module('Tanh200TransformBack', TanhTransformBack(mask=tanh200maskWithoutParameters, norm=200))
+if any(logitmaskWithoutParameters): model.add_module('logitTransformBack', LogitTransformBack(mask=logitmaskWithoutParameters, factor=logitfactor))
+if any(tanh200maskWithoutParameters): model.add_module('tanh200TransformBack', TanhTransformBack(mask=tanh200maskWithoutParameters, norm=200))
+if any(log10maskWithoutParameters): model.add_module('log10TransformBack', LogTransformBack(mask=log10maskWithoutParameters, base=10))
 
 if castto16bit:
     model.add_module('CastTo16Bit', CastTo16Bit())
@@ -578,7 +625,7 @@ mdmm_constraints_config = [
     ('robustpartak4sum_std', 0.00069),
 ]
 if doSingleStage: mdmm_constraints_config = []
-mdmm_constraints = [my_mdmm.EqConstraint(loss_fns[c[0]], c[1], lmbda_init=c[2] if len(c) > 2 else 0., scale=c[3] if len(c) > 3 else 1.)
+mdmm_constraints = [my_mdmm.EqConstraint(loss_fns[c[0]], c[1], lmbda_init=c[2] if len(c) > 2 else 0., scale=c[3] if len(c) > 3 else 0.01)
                     for c in mdmm_constraints_config]
 
 # if no constraints are specified no MDMM is used and these loss scales are used
@@ -635,6 +682,60 @@ csvwriter_train = csv.writer(csvfile_train)
 csvfile_validation = open(out_path.replace('output', 'traininglog').replace('.root', '_validation.csv'), 'w')
 csvwriter_validation = csv.writer(csvfile_validation)
 
+
+
+
+def compute_loss_vals(
+    inp, out, target,
+    spectators,
+    loss_fns,
+    classifier=None,
+    reevalClassifier=False,
+    mmd_instances=(),
+    VARIABLES=None,
+    hidden_fast=None,
+    hidden_full=None,
+):
+    # Build the classifier-augmented out/target just once
+    if reevalClassifier and classifier is not None:
+        base_out_feats = out[:, -len(VARIABLES):]    # [N, D]
+        base_tgt_feats = target[:, -len(VARIABLES):] # [N, D]
+        with torch.no_grad():
+            cls_out = classifier(base_out_feats)     # [N,1]
+            cls_tgt = classifier(base_tgt_feats)     # [N,1]
+            #print('got', cls_out.mean(), cls_tgt.mean())
+        out_aug    = torch.cat((out,    cls_out), dim=1)  # [N,D+1]
+        target_aug = torch.cat((target, cls_tgt), dim=1)  # [N,D+1]
+    else:
+        out_aug, target_aug = out, target
+
+    loss_vals = {}
+
+    for name, fn in loss_fns.items():
+
+        if 'omniscient' in name:
+            # always use the augmented for omniscient (if you like)
+            src = torch.cat((inp,    spectators[:, hidden_fast]), dim=1)
+            prd = torch.cat((out_aug,    spectators[:, hidden_fast]), dim=1)
+            tgt = torch.cat((target_aug, spectators[:, hidden_full]), dim=1)
+            loss_vals[name] = fn(src, prd, tgt)
+            continue
+
+        # If this is an MMD loss, clear its σ-cache and use out_aug/target_aug
+        if reevalClassifier and name.startswith('mmd'):
+            for m in mmd_instances:
+                m.fix_sigma_target_only_by_dimension = None
+                m.fix_sigma_target_only               = None
+            loss_vals[name] = fn(inp, out_aug, target_aug)
+        else:
+            # **All other losses**: keep the original 9-dim outputs
+            loss_vals[name] = fn(inp, out, target)
+
+    return loss_vals
+
+    
+    
+    
 loss_vals = {}
 benchmarks_train = {loss: 0. for loss in loss_fns}
 benchmarks_validation = {loss: 0. for loss in loss_fns}
@@ -666,6 +767,22 @@ for epoch in range(num_epochs):
             for batch, (inp, target, spectators) in enumerate(data_loader):
 
                 out = model(inp)
+                
+                if reevalClassifier:
+                    # pick off the features you originally trained the classifier on
+                    params_out = out[:, -len(VARIABLES):]    # shape [N, D]
+                    params_tgt = target[:, -len(VARIABLES):] # shape [N, D]
+                
+                    with torch.no_grad():
+                        cls_out = classifier(params_out)     # [N, 1]
+                        cls_tgt = classifier(params_tgt)     # [N, 1]
+                
+                    # these are your ONLY mutated versions
+                    out_aug    = torch.cat((out,    cls_out), dim=1)  # [N, D+1]
+                    target_aug = torch.cat((target, cls_tgt), dim=1)  # [N, D+1]   
+                else:
+                    # fall back to the originals
+                    out_aug, target_aug = out, target                                 
 
                 if calculatelosseswithtransformedvariables:
 
@@ -674,6 +791,12 @@ for epoch in range(num_epochs):
                     if any(tanh200maskWithoutParameters):
                         target = TanhTransform(mask=tanh200maskWithoutParameters, norm=200).forward(target)
                         out = TanhTransform(mask=tanh200maskWithoutParameters, norm=200).forward(out)
+                        
+                    if any(log10maskWithParameters):
+                        inp = LogTransform(mask=log10maskWithParameters, base=10).forward(inp)
+                    if any(log10maskWithoutParameters):
+                        target = LogTransform(mask=log10maskWithoutParameters, base=10).forward(target)
+                        out = LogTransform(mask=log10maskWithoutParameters, base=10).forward(out)                        
 
                     if any(logitmaskWithParameters):
                         inp = LogitTransform(mask=logitmaskWithParameters, factor=logitfactor, onnxcompatible=False, eps=epsilon, tiny=tiny).forward(inp)
@@ -681,21 +804,17 @@ for epoch in range(num_epochs):
                         target = LogitTransform(mask=logitmaskWithoutParameters, factor=logitfactor, onnxcompatible=False, eps=epsilon, tiny=tiny).forward(target)
                         out = LogitTransform(mask=logitmaskWithoutParameters, factor=logitfactor, onnxcompatible=False, eps=epsilon, tiny=tiny).forward(out)
 
-                for loss in loss_fns:
-                    if 'omniscient' in loss:
-                        benchmarks[loss] += loss_fns[loss](
-                            torch.cat((inp, spectators[:, hiddenvariables_indices_fast]), dim=1),
-                            torch.cat((inp[:, real_len_parameters:], spectators[:, hiddenvariables_indices_fast]), dim=1),
-                            torch.cat((target, spectators[:, hiddenvariables_indices_full]), dim=1)
-                        ).item()
-                        start_points[loss] += loss_fns[loss](
-                            torch.cat((inp, spectators[:, hiddenvariables_indices_fast]), dim=1),
-                            torch.cat((out, spectators[:, hiddenvariables_indices_fast]), dim=1),
-                            torch.cat((target, spectators[:, hiddenvariables_indices_full]), dim=1)
-                        ).item()
-                    else:
-                        benchmarks[loss] += loss_fns[loss](inp, inp[:, real_len_parameters:], target).item()
-                        start_points[loss] += loss_fns[loss](inp, out, target).item()
+                loss_vals = compute_loss_vals(
+                    inp, out, target,
+                    spectators=spectators,
+                    loss_fns=loss_fns,
+                    classifier=classifier,
+                    reevalClassifier=reevalClassifier,
+                    mmd_instances=(mmd_fn, mmdfixsigma_fn, mmdomniscient_fn),
+                    VARIABLES=VARIABLES,
+                    hidden_fast=hiddenvariables_indices_fast,
+                    hidden_full=hiddenvariables_indices_full,
+                )
 
         for loss in loss_fns:
             benchmarks_train[loss] /= len_train_loader
@@ -739,6 +858,12 @@ for epoch in range(num_epochs):
             if any(tanh200maskWithoutParameters):
                 target = TanhTransform(mask=tanh200maskWithoutParameters, norm=200).forward(target)
                 out = TanhTransform(mask=tanh200maskWithoutParameters, norm=200).forward(out)
+                
+            if any(log10maskWithParameters):
+                inp = LogTransform(mask=log10maskWithParameters, base=10).forward(inp)
+            if any(log10maskWithoutParameters):
+                target = LogTransform(mask=log10maskWithoutParameters, base=10).forward(target)
+                out = LogTransform(mask=log10maskWithoutParameters, base=10).forward(out)                
 
             if any(logitmaskWithParameters):
                 inp = LogitTransform(mask=logitmaskWithParameters, factor=logitfactor, onnxcompatible=False, eps=epsilon, tiny=tiny).forward(inp)
@@ -746,15 +871,18 @@ for epoch in range(num_epochs):
                 target = LogitTransform(mask=logitmaskWithoutParameters, factor=logitfactor, onnxcompatible=False, eps=epsilon, tiny=tiny).forward(target)
                 out = LogitTransform(mask=logitmaskWithoutParameters, factor=logitfactor, onnxcompatible=False, eps=epsilon, tiny=tiny).forward(out)
 
-        for loss in loss_fns:
-            if 'omniscient' in loss:
-                loss_vals[loss] = loss_fns[loss](
-                    torch.cat((inp, spectators[:, hiddenvariables_indices_fast]), dim=1),
-                    torch.cat((out, spectators[:, hiddenvariables_indices_fast]), dim=1),
-                    torch.cat((target, spectators[:, hiddenvariables_indices_full]), dim=1)
-                )
-            else:
-                loss_vals[loss] = loss_fns[loss](inp, out, target)
+        loss_vals = compute_loss_vals(
+            inp, out, target,
+            spectators=spectators,
+            loss_fns=loss_fns,
+            classifier=classifier,
+            reevalClassifier=reevalClassifier,
+            mmd_instances=(mmd_fn, mmdfixsigma_fn, mmdomniscient_fn),
+            VARIABLES=VARIABLES,
+            hidden_fast=hiddenvariables_indices_fast,
+            hidden_full=hiddenvariables_indices_full,
+        )
+
 
         train_loss = None
         if len(mdmm_constraints) > 0:
@@ -811,6 +939,12 @@ for epoch in range(num_epochs):
                 if any(tanh200maskWithoutParameters):
                     target = TanhTransform(mask=tanh200maskWithoutParameters, norm=200).forward(target)
                     out = TanhTransform(mask=tanh200maskWithoutParameters, norm=200).forward(out)
+                    
+                if any(log10maskWithParameters):
+                    inp = LogTransform(mask=log10maskWithParameters, base=10).forward(inp)
+                if any(log10maskWithoutParameters):
+                    target = LogTransform(mask=log10maskWithoutParameters, base=10).forward(target)
+                    out = LogTransform(mask=log10maskWithoutParameters, base=10).forward(out)                    
 
                 if any(logitmaskWithParameters):
                     inp = LogitTransform(mask=logitmaskWithParameters, factor=logitfactor, onnxcompatible=False, eps=epsilon, tiny=tiny).forward(inp)
@@ -818,15 +952,18 @@ for epoch in range(num_epochs):
                     target = LogitTransform(mask=logitmaskWithoutParameters, factor=logitfactor, onnxcompatible=False, eps=epsilon, tiny=tiny).forward(target)
                     out = LogitTransform(mask=logitmaskWithoutParameters, factor=logitfactor, onnxcompatible=False, eps=epsilon, tiny=tiny).forward(out)
 
-            for loss in loss_fns:
-                if 'omniscient' in loss:
-                    loss_vals[loss] = loss_fns[loss](
-                        torch.cat((inp, spectators[:, hiddenvariables_indices_fast]), dim=1),
-                        torch.cat((out, spectators[:, hiddenvariables_indices_fast]), dim=1),
-                        torch.cat((target, spectators[:, hiddenvariables_indices_full]), dim=1)
-                    )
-                else:
-                    loss_vals[loss] = loss_fns[loss](inp, out, target)
+            loss_vals = compute_loss_vals(
+                inp, out, target,
+                spectators=spectators,
+                loss_fns=loss_fns,
+                classifier=classifier,
+                reevalClassifier=reevalClassifier,
+                mmd_instances=(mmd_fn, mmdfixsigma_fn, mmdomniscient_fn),
+                VARIABLES=VARIABLES,
+                hidden_fast=hiddenvariables_indices_fast,
+                hidden_full=hiddenvariables_indices_full,
+            )
+
                 
             
             validation_loss = None

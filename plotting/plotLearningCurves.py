@@ -184,8 +184,8 @@ for iplot, plot in enumerate(plots):
             mdmm_constraint_plotted = True
         print('we should be here', plot, min_y_axis_value)
         
-        min_y_axis_value = min(min_y_axis_value, data_train[p][-3] * 0.95)
-        max_y_axis_value = max(min_y_axis_value, data_train[p][-3] * 1.2)        
+        min_y_axis_value = min(min_y_axis_value, data_train[p][-3] * 0.85)
+        max_y_axis_value = max(min_y_axis_value, data_train[p][-3] * 1.5)        
         print('and after', plot, data_train[p], min_y_axis_value)
 
     styleAx(ax)
@@ -198,7 +198,16 @@ for iplot, plot in enumerate(plots):
     if 'mmd' in plot[0].lower():#can set to false if you've changed the loss function or inputs
         print('taking action')
         ax.set_ylim(bottom=0.00063)
-        ax.set_ylim(top=0.00076)    
+        ax.set_ylim(top=0.00176)  
+        
+        ax.set_ylim(bottom=0.00067)
+        ax.set_ylim(top=0.0008)          
+        if '_ext' in training_id:  
+            ax.set_ylim(bottom=0.000651) 
+            ax.set_ylim(top=0.00067) 
+
+            ax.set_ylim(bottom=0.000683) 
+            ax.set_ylim(top=0.000665)             
 
     # Adjust layout and save the plot
     plt.tight_layout()

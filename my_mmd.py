@@ -56,6 +56,7 @@ class MMD(nn.Module):
         if fix_sigma is None:
             bandwidth = torch.sum(L2_distance.data) / (n_samples**2-n_samples)
         else:
+            #we end up crashing here with torch.is_tensor(fix_sigma) being true
             bandwidth = fix_sigma.detach().clone() if torch.is_tensor(fix_sigma) else torch.tensor(fix_sigma, device=source.device)
 
         if one_sided_bandwidth:
@@ -111,13 +112,14 @@ class MMD(nn.Module):
 
                 self.fix_sigma_target_only = torch.sum(L2_distance.data) / (n_samples**2-n_samples)
 
-                print('\ncalculated BW to be:')
-                print(self.fix_sigma_target_only)
-
             sigma = self.fix_sigma_target_only
 
         elif self.calculate_fix_sigma_for_each_dimension_with_target_only:
-
+        
+            if (self.fix_sigma_target_only_by_dimension is not None
+                    and self.fix_sigma_target_only_by_dimension.shape[0] != source.size(1)):
+                self.fix_sigma_target_only_by_dimension = None        
+         
             if self.fix_sigma_target_only_by_dimension is None:
 
                 total = torch.cat([source, target], dim=0)
@@ -136,14 +138,9 @@ class MMD(nn.Module):
                         raise NotImplementedError('cannot understand how to calculate MMD bandwidths: ' + self.fix_sigma_target_only_by_dimension)
                 else:
                     self.fix_sigma_target_only_by_dimension = torch.tensor([L2_distances[:source.size()[0], source.size()[0]:, i][~(L2_distances[:source.size()[0], source.size()[0]:, i] == 0)].median() for i in range(total.size()[1])], device=total.device)
-
-                print('\ncalculated BWs by dimension to be:')
-                print(self.fix_sigma_target_only_by_dimension)
-
                 for ibw, bw in enumerate(self.fix_sigma_target_only_by_dimension):
                     if bw <= 0: raise Exception('bandwidth is <= 0 for variable number ' + str(ibw))
                     if torch.isnan(bw):
-                        print('\nsetting BW to 1 at position ' + str(ibw))
                         self.fix_sigma_target_only_by_dimension[ibw] = 1.  # TODO: really??
                         # raise Exception('bandwidth is nan for variable number ' + str(ibw))
 

@@ -90,7 +90,7 @@ class LogTransform(nn.Module):
     Dorukhan Boncukçu
     """
 
-    def __init__(self, mask, base=None, eps=1e-6):
+    def __init__(self, mask, base=None, eps=1e-12):
 
         super(LogTransform, self).__init__()
 
@@ -214,7 +214,7 @@ class LogitTransform(nn.Module):
     with a value of 0 for x=0.5
     """
 
-    def __init__(self, mask, eps=1e-8, tiny=1e-8, factor=1., onnxcompatible=False):
+    def __init__(self, mask, eps=1e-12, tiny=1e-12, factor=1., onnxcompatible=False):
 
         super(LogitTransform, self).__init__()
 

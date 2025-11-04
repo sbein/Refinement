@@ -1,3 +1,4 @@
+import sys
 import torch
 from torch.utils.mobile_optimizer import optimize_for_mobile, MobileOptimizerType
 
@@ -12,7 +13,8 @@ trainingID = '20240717'
 # # model_path = path + 'dataloaderRegressionDummyONNX/weights/TrainedModel_PyTorch_Regression_Dummy_ONNX_20220509.pt'
 # model_path = path + 'dataloaderRegression/weights/TrainedModel_PyTorch_Regression_20220513.pt'
 
-model_path = '/data/dust/user/wolfmor/Refinement/TrainingOutput/model_refinement_regression_' + trainingID + '.pt'
+try: model_path = sys.argv[1]
+except: model_path = '/data/dust/user/wolfmor/Refinement/TrainingOutput/model_refinement_regression_' + trainingID + '.pt'
 out_path = model_path.replace('.pt', '_opset11.onnx')
 
 model = torch.jit.load(model_path)
